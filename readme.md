@@ -329,3 +329,7 @@ Authorization: Bearer <retracted>
   }
 ]
 ```
+
+## Related Projects
+
+- [Share2NightScout Bridge](https://github.com/nightscout/share2nightscout-bridge). Similarly to us pulling data from diasend and sending it to nightscout, this projects pulls the data from dexcom web service and pushes it to nightscout. Initially created by [Scott Hanselmann](https://www.hanselman.com/blog/bridging-dexcom-share-cgm-receivers-and-nightscout)
