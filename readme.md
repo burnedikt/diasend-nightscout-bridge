@@ -1,335 +1,47 @@
-# Diasend API
+# Diasend -> Nightscout Bridge
 
-## Authentication & Authorization
+Synchronizes continuuous glucose values (CGV) from [diasend] to [nightscout]
 
-Diasend uses OAuth2 Resource-Owner Password grant with the following client credentials:
+## Configuration
 
-ClientID: a486o3nvdu88cg0sos4cw8cccc0o0cg.api.diasend.com
-ClientSecret: 8imoieg4pyos04s44okoooowkogsco4
+The following environment variables are required, also see [example.env](./.env.example):
 
-```
-curl -H 'Content-Type: application/x-www-form-urlencoded' --compressed -H 'User-Agent: diasend/1.13.0 (iPhone; iOS 15.5; Scale/3.00)'
--H 'Authorization: Basic YTQ4Nm8zbnZkdTg4Y2cwc29zNGN3OGNjY2MwbzBjZy5hcGkuZGlhc2VuZC5jb206OGltb2llZzRweW9zMDRzNDRva29vb293a29nc2NvNA=='
--X POST https://api.diasend.com/1/oauth2/token
--d 'grant_type=password&password=<retracted>&scope=PATIENT%20DIASEND_MOBILE_DEVICE_DATA_RW&username=<retracted>'
-```
+- `DIASEND_USERNAME`: the username / email address of your disasend account
+- `DIASEND_PASSWORD`: the password of your disasend account
+- `NIGHTSCOUT_URL`: the url of your nightscout instance
+- `NIGHTSCOUT_API_SECRET`: the api secret to communicate with your nightscout instance
 
-## CGM Data
+Optionally, you can also provide the following values:
 
-### Combined
+- `DIASEND_CLIENT_ID`: client id for authorization against diasend. Defaults to `a486o3nvdu88cg0sos4cw8cccc0o0cg.api.diasend.com`
+- `DIASEND_CLIENT_SECRET`: client secret for authorization against diasend. Defaults to `8imoieg4pyos04s44okoooowkogsco4`
 
-Includes CGM readings and insulin rates
+## Running
 
-```
-curl
--H 'User-Agent: diasend/1.13.0 (iPhone; iOS 15.5; Scale/3.00)'
--H 'Authorization: Bearer <retracted>'
---compressed
-'https://api.diasend.com/1/patient/data?type=combined&date_from=2022-07-27T10:42:50&date_to=2022-08-01T10:42:50&unit=mg_dl&ext=event'
+To run the bridge, simply execute `yarn install` to install all dependencies and then the following command to synchronize CGV from diasend to nightscout every 5 minutes:
+
+```sh
+yarn start
 ```
 
-Sample Response
+## Further information
 
-```json
-[
-  {
-    "created_at": "2022-07-27T11:37:40",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 155
-  },
-  {
-    "created_at": "2022-07-27T11:41:46",
-    "type": "event",
-    "value": 202001
-  },
-  {
-    "created_at": "2022-07-27T11:42:02",
-    "flags": [
-      {
-        "description": "Bolus type ezcarb",
-        "flag": 1035
-      }
-    ],
-    "programmed_meal": 1,
-    "spike_value": 1,
-    "suggested": 1,
-    "suggestion_based_on_bg": "no",
-    "suggestion_based_on_carb": "yes",
-    "suggestion_overridden": "no",
-    "total_value": 1,
-    "type": "insulin_bolus",
-    "unit": "U"
-  },
-  {
-    "created_at": "2022-07-27T11:42:25",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      },
-      {
-        "description": "Calibration",
-        "flag": 130
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 120
-  },
-  {
-    "created_at": "2022-07-27T11:42:47",
-    "flags": [],
-    "type": "carb",
-    "unit": "g",
-    "value": "24"
-  },
-  {
-    "created_at": "2022-07-27T11:42:49",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 118
-  },
-  {
-    "created_at": "2022-07-27T11:46:47",
-    "type": "event",
-    "value": 202001
-  },
-  {
-    "created_at": "2022-07-27T11:42:20",
-    "flags": [
-      {
-        "description": "Manual",
-        "flag": 126
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 120
-  },
-  {
-    "created_at": "2022-07-27T11:47:41",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 112
-  },
-  {
-    "created_at": "2022-07-27T11:47:57",
-    "flags": [
-      {
-        "description": "Bolus type ezcarb",
-        "flag": 1035
-      }
-    ],
-    "programmed_meal": 0.4,
-    "spike_value": 0.4,
-    "suggested": 0.4,
-    "suggestion_based_on_bg": "no",
-    "suggestion_based_on_carb": "yes",
-    "suggestion_overridden": "no",
-    "total_value": 0.4,
-    "type": "insulin_bolus",
-    "unit": "U"
-  },
-  {
-    "created_at": "2022-07-27T11:48:43",
-    "flags": [],
-    "type": "carb",
-    "unit": "g",
-    "value": "11"
-  },
-  {
-    "created_at": "2022-07-27T11:51:46",
-    "type": "event",
-    "value": 202001
-  },
-  {
-    "created_at": "2022-07-27T11:52:42",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 106
-  },
-  {
-    "created_at": "2022-07-27T11:55:15",
-    "flags": [
-      {
-        "description": "Bolus type ezcarb",
-        "flag": 1035
-      }
-    ],
-    "programmed_meal": 0.4,
-    "spike_value": 0.4,
-    "suggested": 0.4,
-    "suggestion_based_on_bg": "no",
-    "suggestion_based_on_carb": "yes",
-    "suggestion_overridden": "no",
-    "total_value": 0.4,
-    "type": "insulin_bolus",
-    "unit": "U"
-  },
-  {
-    "created_at": "2022-07-27T11:56:00",
-    "flags": [],
-    "type": "carb",
-    "unit": "g",
-    "value": "11"
-  },
-  {
-    "created_at": "2022-07-27T11:56:46",
-    "type": "event",
-    "value": 202001
-  },
-  {
-    "created_at": "2022-07-27T11:57:30",
-    "flags": [
-      {
-        "description": "Bolus type ezcarb",
-        "flag": 1035
-      }
-    ],
-    "programmed_meal": 0.2,
-    "spike_value": 0.2,
-    "suggested": 0.2,
-    "suggestion_based_on_bg": "no",
-    "suggestion_based_on_carb": "yes",
-    "suggestion_overridden": "no",
-    "total_value": 0.2,
-    "type": "insulin_bolus",
-    "unit": "U"
-  },
-  {
-    "created_at": "2022-07-27T11:57:42",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 108
-  },
-  {
-    "created_at": "2022-07-27T11:57:54",
-    "flags": [],
-    "type": "carb",
-    "unit": "g",
-    "value": "4"
-  },
-  {
-    "created_at": "2022-07-27T12:00:00",
-    "flags": [],
-    "type": "insulin_basal",
-    "unit": "U/h",
-    "value": 0.09
-  },
-  {
-    "created_at": "2022-07-27T12:00:00",
-    "flags": [],
-    "type": "insulin_basal",
-    "unit": "U/h",
-    "value": 0
-  },
-  {
-    "created_at": "2022-07-27T12:00:00",
-    "flags": [],
-    "type": "insulin_basal",
-    "unit": "U/h",
-    "value": 0.05
-  },
-  {
-    "created_at": "2022-07-27T12:01:46",
-    "type": "event",
-    "value": 202001
-  },
-  {
-    "created_at": "2022-07-27T12:02:42",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 120
-  },
-  {
-    "created_at": "2022-07-27T12:06:47",
-    "type": "event",
-    "value": 202001
-  }
-]
-```
+This project works by connecting to **diasend's internal (!) API, which may change at any time without warning, so use with caution**, and pulling the latest number of
+so-called _patient data_, converts it to CGV values compatible with nightscout and then uses the nightscout API to push those values.
 
-### Standard
+More information and sample calls on the diasend-api can be found in [diasend-api.http](./diasend-api.http) which can be used with VSCode's [REST Client plugin]
+to quickly try out the API calls.
 
-```
-https://api.diasend.com/1/patient/data?
-type=standardday
-&date_from=2022-07-19T10:42:50
-&date_to=2022-08-01T10:42:50
-&unit=mg_dl
-Authorization: Bearer <retracted>
-```
-
-```json
-[
-  {
-    "created_at": "2022-07-20T18:57:49",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      },
-      {
-        "description": "Calibration",
-        "flag": 130
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 203
-  },
-  {
-    "created_at": "2022-07-26T15:27:39",
-    "flags": [
-      {
-        "description": "Continous reading",
-        "flag": 123
-      }
-    ],
-    "type": "glucose",
-    "unit": "mg/dl",
-    "value": 91
-  }
-]
-```
+This project is written in Typescript.
 
 ## Related Projects
 
-- [Share2NightScout Bridge](https://github.com/nightscout/share2nightscout-bridge). Similarly to us pulling data from diasend and sending it to nightscout, this projects pulls the data from dexcom web service and pushes it to nightscout. Initially created by [Scott Hanselmann](https://www.hanselman.com/blog/bridging-dexcom-share-cgm-receivers-and-nightscout)
+- [Share2NightScout Bridge]: Similarly to us pulling data from diasend and sending it to nightscout, this projects pulls the data from dexcom web service and pushes it to nightscout. Initially created by [Scott Hanselmann]
+- [minimed-connect-to-nightscout]: Scrapes the Minimed website instead of using an API but the bottom line is the same: Pulls data from minimed and pushes it to nightscout
+
+[diasend]: https://www.diasend.com/
+[Share2NightScout Bridge]: https://github.com/nightscout/share2nightscout-bridge
+[nightscout]: https://github.com/nightscout/cgm-remote-monitor
+[Scott Hanselmann]: https://www.hanselman.com/blog/bridging-dexcom-share-cgm-receivers-and-nightscout
+[minimed-connect-to-nightscout]: https://github.com/nightscout/minimed-connect-to-nightscout
+[REST Client plugin]: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
