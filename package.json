@@ -10,7 +10,7 @@
     "url": "https://burnedikt.com/"
   },
   "scripts": {
-    "lint": "eslint",
+    "lint": "eslint .",
     "build": "tsc",
     "prepare": "npm run build",
     "run": "npm run build && node dist/run.js"
@@ -39,6 +39,9 @@
     "parser": "@typescript-eslint/parser",
     "plugins": [
       "@typescript-eslint"
+    ],
+    "ignorePatterns": [
+      "dist/**"
     ],
     "root": true
   },
