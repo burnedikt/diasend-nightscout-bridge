@@ -1,7 +1,8 @@
 {
-  "name": "diasend-nightscout-uploader",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "diasend-nightscout-bridge",
+  "description": "Synchronizes continuuous glucose values (CGV) from diasend to nightscout",
+  "version": "0.1.0",
+  "main": "dist/index.js",
   "license": "MIT",
   "author": {
     "name": "Benedikt Reiser",
