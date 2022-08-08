@@ -46,7 +46,9 @@ async function syncDiasendDataToNigthscout({
     await reportCgmToNightScout(cgmRecords),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
-}: SyncDiasendDataToNightScoutArgs) {
+}: SyncDiasendDataToNightScoutArgs): Promise<
+  NightscoutSensorGlucoseValueEntry[]
+> {
   if (!diasendUsername) {
     throw Error("Diasend Username not configured");
   }
@@ -79,6 +81,7 @@ async function syncDiasendDataToNigthscout({
   // send them to nightscout
   console.log(`Sending ${cgmRecords.length} records to nightscout`);
   await nightscoutEntriesHandler(cgmRecords);
+  return cgmRecords;
 }
 
 // CamAPSFx uploads data to diasend every 5 minutes. (Which is also the time after which new CGM values from Dexcom will be available)
@@ -92,27 +95,33 @@ export function startSynchronization({
 }: {
   pollingIntervalMs?: number;
 } & SyncDiasendDataToNightScoutArgs = {}) {
-  syncDiasendDataToNigthscout({ dateFrom, ...syncArgs }).finally(() => {
-    // next run's data should be fetched where this run ended
-    const nextDateFrom = new Date();
-    // schedule the next run
-    console.log(
-      `Next run will be in ${dayjs()
-        .add(pollingIntervalMs, "milliseconds")
-        .fromNow()}...`
-    );
-    // if synchronizationTimeoutId is set to 0 when we get here, don't schedule a re-run. This is the exit condition
-    // and prevents the synchronization loop from continuing if the timeout is cleared while already running the sync
-    if (synchronizationTimeoutId !== 0) {
-      synchronizationTimeoutId = setTimeout(() => {
-        void startSynchronization({
-          pollingIntervalMs,
-          ...syncArgs,
-          dateFrom: nextDateFrom,
-        });
-      }, pollingIntervalMs);
-    }
-  });
+  let nextDateFrom: Date = dateFrom;
+  syncDiasendDataToNigthscout({ dateFrom, ...syncArgs })
+    .then((records) => {
+      if (records.length) {
+        // next run's data should be fetched where this run ended, so take a look at the records
+        nextDateFrom = new Date(records[records.length - 1].date + 1000);
+      }
+    })
+    .finally(() => {
+      // schedule the next run
+      console.log(
+        `Next run will be in ${dayjs()
+          .add(pollingIntervalMs, "milliseconds")
+          .fromNow()}...`
+      );
+      // if synchronizationTimeoutId is set to 0 when we get here, don't schedule a re-run. This is the exit condition
+      // and prevents the synchronization loop from continuing if the timeout is cleared while already running the sync
+      if (synchronizationTimeoutId !== 0) {
+        synchronizationTimeoutId = setTimeout(() => {
+          void startSynchronization({
+            pollingIntervalMs,
+            ...syncArgs,
+            dateFrom: nextDateFrom,
+          });
+        }, pollingIntervalMs);
+      }
+    });
 
   // return a function that can be used to end the loop
   return () => {
