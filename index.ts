@@ -63,7 +63,11 @@ async function syncDiasendDataToNigthscout({
 
   // using the diasend token, now fetch the patient records
   const records = await getPatientData(diasendAccessToken, dateFrom, dateTo);
-  console.log("Records since", dayjs(dateFrom).fromNow(), records);
+  console.log(
+    "Number of diasend records since",
+    dayjs(dateFrom).fromNow(),
+    records.length
+  );
 
   // extract all CGM values first
   const cgmRecords = records
