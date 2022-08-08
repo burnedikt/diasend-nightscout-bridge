@@ -34,24 +34,26 @@ export interface NightscoutSensorGlucoseValueEntry extends NightscoutEntry {
   rssi?: number;
 }
 
-if (!config.nightscout.apiSecret) {
-  throw Error(
-    "Nightscout API Secret needs to be defined as an env var 'NIGHTSCOUT_API_SECRET'"
-  );
-}
+function getNightscoutClient(apiSecret = config.nightscout.apiSecret) {
+  if (!apiSecret) {
+    throw Error(
+      "Nightscout API Secret needs to be defined as an env var 'NIGHTSCOUT_API_SECRET'"
+    );
+  }
 
-const shasum = crypto.createHash("sha1");
-shasum.update(config.nightscout.apiSecret);
-const nightscoutClient = axios.create({
-  baseURL: config.nightscout.url,
-  headers: {
-    "api-secret": shasum.digest("hex"),
-  },
-});
+  const shasum = crypto.createHash("sha1");
+  shasum.update(apiSecret);
+  return axios.create({
+    baseURL: config.nightscout.url,
+    headers: {
+      "api-secret": shasum.digest("hex"),
+    },
+  });
+}
 
 export async function getLatestCgmUpdateOnNightscout() {
   // get only one entry --> the newest one
-  const repsonse = await nightscoutClient.get<
+  const repsonse = await getNightscoutClient().get<
     NightscoutSensorGlucoseValueEntry[]
   >("/api/v1/entries/sgv", {
     params: { count: 1 },
@@ -64,5 +66,5 @@ export async function reportCgmToNightScout(
   values: NightscoutSensorGlucoseValueEntry[]
 ) {
   if (!values.length) return;
-  await nightscoutClient.post("/api/v1/entries/", values);
+  await getNightscoutClient().post("/api/v1/entries/", values);
 }

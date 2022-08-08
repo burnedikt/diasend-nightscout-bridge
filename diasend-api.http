@@ -3,8 +3,6 @@
 @diasendClientSecret = {{$dotenv DIASEND_CLIENT_SECRET}}
 @diasendUsername = {{$dotenv DIASEND_USERNAME}}
 @diasendPassword = {{$dotenv DIASEND_PASSWORD}}
-@nightscoutHostname = "{{$dotenv NIGHTSCOUT_URL}}"
-@nightscoutApiSecret = {{$dotenv NIGHTSCOUT_API_SECRET}}
 
 # @name GetAccessToken
 
@@ -27,17 +25,3 @@ GET https://{{diasendHostname}}/1/patient/data
 Authorization: Bearer {{GetAccessToken.response.body.access_token}}
 
 ###
-
-# @name AddEntry
-
-# see <NIGHTSCOUT_URL>/api-docs/#/Entries/addEntries for docs
-
-POST https://{{nightscoutHostname}}/api/v1/entries/
-Content-Type: application/json
-api-secret: $API_SECRET
-
-{
-  "sgv": 100,
-  "type": "sgv",
-  "date": 1449872210706
-}'

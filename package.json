@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "build": "tsc",
     "prepare": "npm run build",
-    "run": "npm run build && node dist/run.js"
+    "run": "npm run build && node dist/run.js",
+    "test-run": "npm run build && node dist/test-run.js"
   },
   "devDependencies": {
     "@types/node": "^18.6.3",
