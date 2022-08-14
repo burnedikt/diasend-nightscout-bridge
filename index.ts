@@ -37,7 +37,7 @@ interface SyncDiasendDataToNightScoutArgs {
   dateTo?: Date;
 }
 
-async function syncDiasendDataToNigthscout({
+async function syncDiasendDataToNightscout({
   diasendUsername = config.diasend.username,
   diasendPassword = config.diasend.password,
   diasendClientId = config.diasend.clientId,
@@ -96,7 +96,7 @@ export function startSynchronization({
   pollingIntervalMs?: number;
 } & SyncDiasendDataToNightScoutArgs = {}) {
   let nextDateFrom: Date = dateFrom;
-  syncDiasendDataToNigthscout({ dateFrom, ...syncArgs })
+  syncDiasendDataToNightscout({ dateFrom, ...syncArgs })
     .then((records) => {
       if (records.length) {
         // next run's data should be fetched where this run ended, so take a look at the records
