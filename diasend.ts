@@ -80,7 +80,7 @@ export async function getPatientData(
       type: "combined",
       date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
       date_to: dayjs(date_to).format(diasendIsoFormatWithoutTZ),
-      unit,
+      unit: unit.replace("/", "_"),
     },
     headers: { Authorization: `Bearer ${accessToken}` },
   });

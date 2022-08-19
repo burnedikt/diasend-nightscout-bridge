@@ -14,6 +14,7 @@ dayjs.extend(relativeTime);
 function diasendPatientRecordToNightscoutEntry(
   record: PatientRecord
 ): SensorGlucoseValueEntry {
+  // FIXME: The created_at datetimes from diasend do not contain any timezone information which can be problematic
   const date = new Date(record.created_at);
   return {
     type: "sgv",
