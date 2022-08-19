@@ -15,6 +15,7 @@ Optionally, you can also provide the following values:
 
 - `DIASEND_CLIENT_ID`: client id for authorization against diasend. Defaults to `a486o3nvdu88cg0sos4cw8cccc0o0cg.api.diasend.com`
 - `DIASEND_CLIENT_SECRET`: client secret for authorization against diasend. Defaults to `8imoieg4pyos04s44okoooowkogsco4`
+- `GLUCOSE_UNIT`: units to use for glucose values. Can be either `mg/dl` or `mmol/l`. Glucose values will be obtained from diasend with this unit and pushed to nightscout accordingly.
 
 ## Running
 
