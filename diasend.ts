@@ -69,7 +69,7 @@ export async function getPatientData(
 ) {
   const response = await diasendClient.get<PatientRecord[]>("/patient/data", {
     params: {
-      type: "combined",
+      type: "cgm",
       date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
       date_to: dayjs(date_to).format(diasendIsoFormatWithoutTZ),
       unit: "mg_dl",
