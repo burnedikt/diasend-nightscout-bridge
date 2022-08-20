@@ -19,6 +19,16 @@ Optionally, you can also provide the following values:
 
 ## Running
 
+There are two different ways to use this project in order to synchronize data from diasend to nightscout. You can either [run this bridge standalone](#standalone) in which case it will pull the data via the diasend API and forward it to nightscout via nightscout's REST API. The downside here is that you need to run it on an additional server or PC which is why the more intuitive way is [running the bridge as a plugin directly as part of nightscout](#nightscout-plugin). This way, the data will still be pulled from diasend via its HTTP API but the data will directly be imported into nightscout without going through its REST API, which should likely be more reliable and remove the need to run the bridge separately.
+
+### Nigthscout Plugin
+
+To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1. Once installed and enabled via nightscout's `ENABLE="... diasend ..."` environment variable, nightscout will automatically pull data in from diasend.
+
+A future goal is to either merge the example implementation above upstream or publish the bridge as a nightscout plugin directly to npm so that the integration with nightscout becomes easier.
+
+### Standalone
+
 To run the bridge, simply execute `yarn install` to install all dependencies and then the following command to synchronize CGV from diasend to nightscout every 5 minutes:
 
 ```sh
