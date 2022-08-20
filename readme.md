@@ -51,6 +51,7 @@ This project is written in Typescript.
 
 - [Share2NightScout Bridge]: Similarly to us pulling data from diasend and sending it to nightscout, this projects pulls the data from dexcom web service and pushes it to nightscout. Initially created by [Scott Hanselmann]
 - [minimed-connect-to-nightscout]: Scrapes the Minimed website instead of using an API but the bottom line is the same: Pulls data from minimed and pushes it to nightscout
+- [diasend2nightscout-bridge]: Has the same goal of this project but up to now did not provide an end-to-end solution for synchronizing the data between diasend and nightscout as far as I can tell
 
 [diasend]: https://www.diasend.com/
 [Share2NightScout Bridge]: https://github.com/nightscout/share2nightscout-bridge
@@ -58,3 +59,4 @@ This project is written in Typescript.
 [Scott Hanselmann]: https://www.hanselman.com/blog/bridging-dexcom-share-cgm-receivers-and-nightscout
 [minimed-connect-to-nightscout]: https://github.com/nightscout/minimed-connect-to-nightscout
 [REST Client plugin]: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+[diasend2nightscout-brigde]: https://github.com/funkstille/diasend2nightscout-bridge
