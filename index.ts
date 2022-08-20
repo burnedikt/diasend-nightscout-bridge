@@ -5,23 +5,24 @@ import {
   obtainDiasendAccessToken,
   PatientRecord,
   getPatientData,
+  GlucoseUnit,
 } from "./diasend";
-import {
-  NightscoutSensorGlucoseValueEntry,
-  reportCgmToNightScout,
-} from "./nightscout";
+import { SensorGlucoseValueEntry, reportCgmToNightScout } from "./nightscout";
 
 dayjs.extend(relativeTime);
 
 function diasendPatientRecordToNightscoutEntry(
   record: PatientRecord
-): NightscoutSensorGlucoseValueEntry {
+): SensorGlucoseValueEntry {
+  // FIXME: The created_at datetimes from diasend do not contain any timezone information which can be problematic
   const date = new Date(record.created_at);
   return {
     type: "sgv",
+    direction: undefined, // TODO: we currently cannot obtain the direction / trend from diasend
     sgv: record.value,
     dateString: date.toISOString(),
     date: date.getTime(),
+    units: record.unit === "mmol/l" ? "mmol" : "mg",
   };
 }
 
@@ -31,10 +32,11 @@ interface SyncDiasendDataToNightScoutArgs {
   diasendClientId?: string;
   diasendClientSecret?: string;
   nightscoutEntriesHandler?: (
-    entries: NightscoutSensorGlucoseValueEntry[]
+    entries: SensorGlucoseValueEntry[]
   ) => Promise<void>;
   dateFrom?: Date;
   dateTo?: Date;
+  glucoseUnit?: GlucoseUnit;
 }
 
 async function syncDiasendDataToNightscout({
@@ -46,9 +48,8 @@ async function syncDiasendDataToNightscout({
     await reportCgmToNightScout(cgmRecords),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
-}: SyncDiasendDataToNightScoutArgs): Promise<
-  NightscoutSensorGlucoseValueEntry[]
-> {
+  glucoseUnit = config.units.glucose,
+}: SyncDiasendDataToNightScoutArgs): Promise<SensorGlucoseValueEntry[]> {
   if (!diasendUsername) {
     throw Error("Diasend Username not configured");
   }
@@ -64,7 +65,12 @@ async function syncDiasendDataToNightscout({
   );
 
   // using the diasend token, now fetch the patient records
-  const records = await getPatientData(diasendAccessToken, dateFrom, dateTo);
+  const records = await getPatientData(
+    diasendAccessToken,
+    dateFrom,
+    dateTo,
+    glucoseUnit
+  );
   console.log(
     "Number of diasend records since",
     dayjs(dateFrom).fromNow(),

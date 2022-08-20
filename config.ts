@@ -1,4 +1,20 @@
-export default {
+import { GlucoseUnit } from "./diasend";
+
+const config: {
+  diasend: {
+    clientId: string;
+    clientSecret: string;
+    username?: string;
+    password?: string;
+  };
+  nightscout: {
+    url?: string;
+    apiSecret?: string;
+  };
+  units: {
+    glucose: GlucoseUnit;
+  };
+} = {
   diasend: {
     clientId:
       process.env.DIASEND_CLIENT_ID ||
@@ -12,4 +28,9 @@ export default {
     url: process.env.NIGHTSCOUT_URL,
     apiSecret: process.env.NIGHTSCOUT_API_SECRET,
   },
+  units: {
+    glucose: (process.env.GLUCOSE_UNIT as GlucoseUnit) || "mg/dl",
+  },
 };
+
+export default config;

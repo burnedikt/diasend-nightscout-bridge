@@ -5,6 +5,8 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import NodeCache from "node-cache";
 
+export type GlucoseUnit = "mg/dl" | "mmol/l";
+
 const tokenCache = new NodeCache({
   checkperiod: 60, // check every 60 seconds for expired items / tokens
 });
@@ -24,8 +26,13 @@ export interface PatientRecord {
   type: "glucose" | "inuslin_basal" | "insulin_bolus" | "carb";
   created_at: string;
   value: number;
-  unit: "mg/dl" | "g";
+  unit: "g" | GlucoseUnit;
   flags: { flag: number; description: string }[];
+}
+
+export interface PatientGlucoseRecord extends PatientRecord {
+  type: "glucose";
+  unit: GlucoseUnit;
 }
 
 const diasendClient = axios.create({
@@ -65,14 +72,15 @@ export async function obtainDiasendAccessToken(
 export async function getPatientData(
   accessToken: string,
   date_from: Date,
-  date_to: Date
+  date_to: Date,
+  unit: GlucoseUnit = "mg/dl"
 ) {
   const response = await diasendClient.get<PatientRecord[]>("/patient/data", {
     params: {
       type: "cgm",
       date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
       date_to: dayjs(date_to).format(diasendIsoFormatWithoutTZ),
-      unit: "mg_dl",
+      unit: unit.replace("/", "_"),
     },
     headers: { Authorization: `Bearer ${accessToken}` },
   });
