@@ -15,6 +15,7 @@ import {
   MealBolusTreatment,
   reportTreatmentsToNightscout,
   Treatment,
+  CorrectionBolusTreatment,
 } from "./nightscout";
 
 dayjs.extend(relativeTime);
@@ -107,43 +108,64 @@ async function syncDiasendDataToNightscout({
       (record): record is CarbRecord | BolusRecord =>
         ["insulin_bolus", "carb"].includes(record.type)
     )
-    .reduce<MealBolusTreatment[]>((treatments, record, _index, allRecords) => {
-      // we only care about boli
-      if (record.type === "carb") {
+    .reduce<(MealBolusTreatment | CorrectionBolusTreatment)[]>(
+      (treatments, record, _index, allRecords) => {
+        // we only care about boli
+        if (record.type === "carb") {
+          return treatments;
+        }
+
+        const bolusRecord = record;
+        // for a (meal) bolus, find the corresponding carbs record, if any
+        // the carbs record is usually added ~1 minute later to diasend than the bolus for some reason
+        // if it's not a meal bolus, it's a correction bolus
+        const isMealBolus = "programmed_meal" in bolusRecord;
+        if (isMealBolus) {
+          const carbRecord = allRecords
+            .filter<CarbRecord>((r): r is CarbRecord => r.type === "carb")
+            .find(
+              (r) =>
+                // carbs should have been recorded within the next minute after bolus
+                new Date(r.created_at) > new Date(bolusRecord.created_at) &&
+                new Date(r.created_at).getTime() -
+                  new Date(bolusRecord.created_at).getTime() <=
+                  60 * 1000
+            );
+
+          if (!carbRecord) {
+            // FIXME: schedule another run if carb event not yet found
+            console.warn("Could not find corresponding carb value for bolus");
+          } else {
+            treatments.push({
+              eventType: "Meal Bolus",
+              insulin: bolusRecord.total_value,
+              carbs: parseInt(carbRecord.value),
+              notes: bolusRecord.programmed_bg_correction
+                ? `Correction: ${bolusRecord.programmed_bg_correction}`
+                : undefined,
+              app: "diasend",
+              date: new Date(bolusRecord.created_at).getTime(),
+              device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
+            });
+          }
+        } else {
+          if (bolusRecord.programmed_bg_correction) {
+            treatments.push({
+              eventType: "Correction Bolus",
+              insulin: bolusRecord.programmed_bg_correction,
+              app: "diasend",
+              date: new Date(bolusRecord.created_at).getTime(),
+              device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
+            });
+          } else {
+            console.warn("Bolus record cannot be handled", bolusRecord);
+          }
+        }
+
         return treatments;
-      }
-
-      // for a (meal) bolus, find the corresponding carbs record, if any
-      // the carbs record is usually added ~1 minute later to diasend than the bolus for some reason
-      const bolusRecord = record;
-      const carbRecord = allRecords.find(
-        (r) =>
-          r.type === "carb" &&
-          // carbs should have been recorded within the next minute after bolus
-          new Date(r.created_at) > new Date(bolusRecord.created_at) &&
-          new Date(r.created_at).getTime() -
-            new Date(bolusRecord.created_at).getTime() <=
-            60 * 1000
-      ) as CarbRecord;
-
-      if (!carbRecord) {
-        // FIXME: schedule another run if carb event not yet found
-        console.warn("Could not find corresponding carb value for bolus");
-      } else {
-        treatments.push({
-          eventType: "Meal Bolus",
-          insulin: bolusRecord.total_value,
-          carbs: parseInt(carbRecord.value),
-          notes: bolusRecord.programmed_bg_correction
-            ? `Correction: ${bolusRecord.programmed_bg_correction}`
-            : undefined,
-          app: "diasend",
-          date: new Date(bolusRecord.created_at).getTime(),
-          device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
-        });
-      }
-      return treatments;
-    }, []);
+      },
+      []
+    );
 
   console.log(`Sending ${nightscoutEntries.length} entries to nightscout`);
   console.log(

@@ -68,6 +68,10 @@ interface BaseBolusTreatment extends Treatment {
   preBolus?: number;
 }
 
+export interface CorrectionBolusTreatment extends BaseBolusTreatment {
+  eventType: "Correction Bolus";
+}
+
 export interface MealBolusTreatment extends BaseBolusTreatment {
   eventType: "Meal Bolus";
   // Amount of carbs given.

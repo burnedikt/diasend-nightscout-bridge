@@ -45,8 +45,8 @@ export interface BolusRecord extends BaseRecord {
   suggestion_overriden: YesOrNo;
   suggestion_based_on_bg: YesOrNo;
   suggestion_based_on_carb: YesOrNo;
-  programmed_meal: number;
-  programmed_bg_correction: number;
+  programmed_meal?: number;
+  programmed_bg_correction?: number;
 }
 export interface CarbRecord extends BaseRecord {
   type: "carb";
