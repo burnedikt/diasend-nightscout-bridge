@@ -3,16 +3,25 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {
   obtainDiasendAccessToken,
-  PatientRecord,
   getPatientData,
   GlucoseUnit,
+  GlucoseRecord,
+  CarbRecord,
+  BolusRecord,
 } from "./diasend";
-import { SensorGlucoseValueEntry, reportCgmToNightScout } from "./nightscout";
+import {
+  SensorGlucoseValueEntry,
+  reportEntriesToNightscout,
+  MealBolusTreatment,
+  reportTreatmentsToNightscout,
+  Treatment,
+  CorrectionBolusTreatment,
+} from "./nightscout";
 
 dayjs.extend(relativeTime);
 
-function diasendPatientRecordToNightscoutEntry(
-  record: PatientRecord
+function diasendGlucoseRecordToNightscoutEntry(
+  record: GlucoseRecord
 ): SensorGlucoseValueEntry {
   // FIXME: The created_at datetimes from diasend do not contain any timezone information which can be problematic
   const date = new Date(record.created_at);
@@ -23,6 +32,8 @@ function diasendPatientRecordToNightscoutEntry(
     dateString: date.toISOString(),
     date: date.getTime(),
     units: record.unit === "mmol/l" ? "mmol" : "mg",
+    app: "diasend",
+    device: `${record.device.model} (${record.device.serial})`,
   };
 }
 
@@ -33,7 +44,10 @@ interface SyncDiasendDataToNightScoutArgs {
   diasendClientSecret?: string;
   nightscoutEntriesHandler?: (
     entries: SensorGlucoseValueEntry[]
-  ) => Promise<void>;
+  ) => Promise<SensorGlucoseValueEntry[] | undefined>;
+  nightscoutTreatmentsHandler?: (
+    treatments: Treatment[]
+  ) => Promise<Treatment[] | undefined>;
   dateFrom?: Date;
   dateTo?: Date;
   glucoseUnit?: GlucoseUnit;
@@ -44,12 +58,14 @@ async function syncDiasendDataToNightscout({
   diasendPassword = config.diasend.password,
   diasendClientId = config.diasend.clientId,
   diasendClientSecret = config.diasend.clientSecret,
-  nightscoutEntriesHandler = async (cgmRecords) =>
-    await reportCgmToNightScout(cgmRecords),
+  nightscoutEntriesHandler = async (entries) =>
+    await reportEntriesToNightscout(entries),
+  nightscoutTreatmentsHandler = async (treatments) =>
+    await reportTreatmentsToNightscout(treatments),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
   glucoseUnit = config.units.glucose,
-}: SyncDiasendDataToNightScoutArgs): Promise<SensorGlucoseValueEntry[]> {
+}: SyncDiasendDataToNightScoutArgs) {
   if (!diasendUsername) {
     throw Error("Diasend Username not configured");
   }
@@ -78,16 +94,88 @@ async function syncDiasendDataToNightscout({
   );
 
   // extract all CGM values first
-  const cgmRecords = records
+  const nightscoutEntries = records
     // TODO: support non-glucose type values
     // TODO: treat calibration events differently?
-    .filter((record) => record.type === "glucose")
-    .map(diasendPatientRecordToNightscoutEntry);
+    .filter<GlucoseRecord>(
+      (record): record is GlucoseRecord => record.type === "glucose"
+    )
+    .map(diasendGlucoseRecordToNightscoutEntry);
 
+  // handle insulin boli
+  const nightscoutTreatments = records
+    .filter<CarbRecord | BolusRecord>(
+      (record): record is CarbRecord | BolusRecord =>
+        ["insulin_bolus", "carb"].includes(record.type)
+    )
+    .reduce<(MealBolusTreatment | CorrectionBolusTreatment)[]>(
+      (treatments, record, _index, allRecords) => {
+        // we only care about boli
+        if (record.type === "carb") {
+          return treatments;
+        }
+
+        const bolusRecord = record;
+        // for a (meal) bolus, find the corresponding carbs record, if any
+        // the carbs record is usually added ~1 minute later to diasend than the bolus for some reason
+        // if it's not a meal bolus, it's a correction bolus
+        const isMealBolus = "programmed_meal" in bolusRecord;
+        if (isMealBolus) {
+          const carbRecord = allRecords
+            .filter<CarbRecord>((r): r is CarbRecord => r.type === "carb")
+            .find(
+              (r) =>
+                // carbs should have been recorded within the next minute after bolus
+                new Date(r.created_at) > new Date(bolusRecord.created_at) &&
+                new Date(r.created_at).getTime() -
+                  new Date(bolusRecord.created_at).getTime() <=
+                  60 * 1000
+            );
+
+          if (!carbRecord) {
+            // FIXME: schedule another run if carb event not yet found
+            console.warn("Could not find corresponding carb value for bolus");
+          } else {
+            treatments.push({
+              eventType: "Meal Bolus",
+              insulin: bolusRecord.total_value,
+              carbs: parseInt(carbRecord.value),
+              notes: bolusRecord.programmed_bg_correction
+                ? `Correction: ${bolusRecord.programmed_bg_correction}`
+                : undefined,
+              app: "diasend",
+              date: new Date(bolusRecord.created_at).getTime(),
+              device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
+            });
+          }
+        } else {
+          if (bolusRecord.programmed_bg_correction) {
+            treatments.push({
+              eventType: "Correction Bolus",
+              insulin: bolusRecord.programmed_bg_correction,
+              app: "diasend",
+              date: new Date(bolusRecord.created_at).getTime(),
+              device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
+            });
+          } else {
+            console.warn("Bolus record cannot be handled", bolusRecord);
+          }
+        }
+
+        return treatments;
+      },
+      []
+    );
+
+  console.log(`Sending ${nightscoutEntries.length} entries to nightscout`);
+  console.log(
+    `Sending ${nightscoutTreatments.length} treatments to nightscout`
+  );
   // send them to nightscout
-  console.log(`Sending ${cgmRecords.length} records to nightscout`);
-  await nightscoutEntriesHandler(cgmRecords);
-  return cgmRecords;
+  return await Promise.all([
+    nightscoutEntriesHandler(nightscoutEntries),
+    nightscoutTreatmentsHandler(nightscoutTreatments),
+  ]);
 }
 
 // CamAPSFx uploads data to diasend every 5 minutes. (Which is also the time after which new CGM values from Dexcom will be available)
@@ -103,8 +191,8 @@ export function startSynchronization({
 } & SyncDiasendDataToNightScoutArgs = {}) {
   let nextDateFrom: Date = dateFrom;
   syncDiasendDataToNightscout({ dateFrom, ...syncArgs })
-    .then((records) => {
-      if (records.length) {
+    .then(([records]) => {
+      if (records && records.length) {
         // next run's data should be fetched where this run ended, so take a look at the records
         nextDateFrom = new Date(records[records.length - 1].date + 1000);
       }

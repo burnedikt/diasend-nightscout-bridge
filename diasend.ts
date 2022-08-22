@@ -22,17 +22,50 @@ interface TokenResponse {
   token_type: string;
 }
 
-export interface PatientRecord {
-  type: "glucose" | "inuslin_basal" | "insulin_bolus" | "carb";
+export interface BaseRecord {
   created_at: string;
-  value: number;
-  unit: "g" | GlucoseUnit;
   flags: { flag: number; description: string }[];
+  device: DeviceData;
 }
 
-export interface PatientGlucoseRecord extends PatientRecord {
+export interface GlucoseRecord extends BaseRecord {
   type: "glucose";
+  value: number;
   unit: GlucoseUnit;
+}
+
+type YesOrNo = "yes" | "no";
+
+export interface BolusRecord extends BaseRecord {
+  type: "insulin_bolus";
+  unit: "U";
+  total_value: number;
+  spike_value: number;
+  suggested: number;
+  suggestion_overriden: YesOrNo;
+  suggestion_based_on_bg: YesOrNo;
+  suggestion_based_on_carb: YesOrNo;
+  programmed_meal?: number;
+  programmed_bg_correction?: number;
+}
+export interface CarbRecord extends BaseRecord {
+  type: "carb";
+  value: string; // for some reason, carbs are not given as numbers but a string 🤷
+  unit: "g";
+}
+
+export interface BasalRecord extends BaseRecord {
+  type: "insulin_basal";
+  unit: "U/h";
+  value: number;
+}
+
+type PatientRecord = GlucoseRecord | BolusRecord | BasalRecord | CarbRecord;
+
+interface DeviceData {
+  serial: string;
+  manufacturer: string;
+  model: string;
 }
 
 const diasendClient = axios.create({
@@ -74,8 +107,10 @@ export async function getPatientData(
   date_from: Date,
   date_to: Date,
   unit: GlucoseUnit = "mg/dl"
-) {
-  const response = await diasendClient.get<PatientRecord[]>("/patient/data", {
+): Promise<PatientRecord[]> {
+  const response = await diasendClient.get<
+    { data: PatientRecord[]; device: DeviceData }[]
+  >("/patient/data", {
     params: {
       type: "cgm",
       date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
@@ -85,5 +120,13 @@ export async function getPatientData(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  return response.data;
+  return response.data.reduce<PatientRecord[]>((records, recordsPerDevice) => {
+    records.push(
+      ...recordsPerDevice.data.map((r) => ({
+        ...r,
+        device: recordsPerDevice.device,
+      }))
+    );
+    return records;
+  }, []);
 }

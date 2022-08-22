@@ -3,10 +3,15 @@ import { startSynchronization } from ".";
 
 void startSynchronization({
   pollingIntervalMs: 5000,
-  dateFrom: dayjs().subtract(10, "minutes").toDate(),
+  dateFrom: dayjs().subtract(600, "minutes").toDate(),
   nightscoutEntriesHandler: (entries) =>
     new Promise((resolve) => {
       console.log(entries);
-      resolve();
+      resolve(entries);
+    }),
+  nightscoutTreatmentsHandler: (treatments) =>
+    new Promise((resolve) => {
+      console.log(treatments);
+      resolve(treatments);
     }),
 });
