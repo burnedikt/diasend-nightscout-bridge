@@ -1,6 +1,8 @@
-# Diasend -> Nightscout Bridge
+# Diasend -> Nightscout Bridge #WeAreNotWaiting
 
 Synchronizes continuuous glucose values (CGV) from [diasend] to [nightscout]. This can e.g. help CamAPS | Fx users to view their treatments and glucose values via nightscout.
+
+While diasend will eventually be replaced by glooko which will provide a more open API to access the data and forward it to nightscout, this project can help in the meantime. #WeAreNotWaiting
 
 ## Supported Features / Data
 
@@ -66,6 +68,16 @@ This project is written in Typescript.
 - [minimed-connect-to-nightscout]: Scrapes the Minimed website instead of using an API but the bottom line is the same: Pulls data from minimed and pushes it to nightscout
 - [diasend2nightscout-bridge]: Has the same goal of this project but up to now did not provide an end-to-end solution for synchronizing the data between diasend and nightscout as far as I can tell
 
+## Contributing
+
+[File an issue] if you'd like to give feedback, request an enhancement, or report a bug.
+
+Pull requests are welcome.
+
+## Disclaimer
+
+This project is intended for educational and informational purposes only. It relies on a series of fragile components and assumptions, any of which may break at any time. It is not FDA approved and should not be used to make medical decisions. It is neither affiliated with nor endorsed by diasend / glooko, and may violate their Terms of Service.
+
 [diasend]: https://www.diasend.com/
 [Share2NightScout Bridge]: https://github.com/nightscout/share2nightscout-bridge
 [nightscout]: https://github.com/nightscout/cgm-remote-monitor
@@ -75,3 +87,4 @@ This project is written in Typescript.
 [diasend2nightscout-bridge]: https://github.com/funkstille/diasend2nightscout-bridge
 [change-polling-interval]: https://github.com/burnedikt/diasend-nightscout-bridge/blob/f29f671dfa74bf9b14ae8610d84c8d58a654c37f/index.ts#L190
 [pump-settings-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/1
+[File an issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/new/choose
