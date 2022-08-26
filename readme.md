@@ -23,7 +23,7 @@ There are two different ways to use this project in order to synchronize data fr
 
 ### Nigthscout Plugin
 
-To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1. 
+To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1.
 
 Once installed, the plugin needs to be enabled via nightscout's `ENABLE="... diasend ..."` environment variable and the following two environment variables need to be defined: `DIASEND_USERNAME` and `DIASEND_PASSWORD` so that nightscout will automatically pull data in from diasend.
 
@@ -59,4 +59,4 @@ This project is written in Typescript.
 [Scott Hanselmann]: https://www.hanselman.com/blog/bridging-dexcom-share-cgm-receivers-and-nightscout
 [minimed-connect-to-nightscout]: https://github.com/nightscout/minimed-connect-to-nightscout
 [REST Client plugin]: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
-[diasend2nightscout-brigde]: https://github.com/funkstille/diasend2nightscout-bridge
+[diasend2nightscout-bridge]: https://github.com/funkstille/diasend2nightscout-bridge
