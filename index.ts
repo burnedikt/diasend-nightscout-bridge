@@ -191,11 +191,17 @@ export function startSynchronization({
 } & SyncDiasendDataToNightScoutArgs = {}) {
   let nextDateFrom: Date = dateFrom;
   syncDiasendDataToNightscout({ dateFrom, ...syncArgs })
-    .then(([records]) => {
-      if (records && records.length) {
-        // next run's data should be fetched where this run ended, so take a look at the records
-        nextDateFrom = new Date(records[records.length - 1].date + 1000);
+    .then(([entries, treatments]) => {
+      // next run's data should be fetched where this run ended, so take a look at the records
+      if (!entries?.length && !treatments?.length) {
+        return;
       }
+      nextDateFrom = new Date(
+        (entries ?? [])
+          .map((e) => e.date)
+          .concat((treatments ?? []).map((t) => t.date))
+          .sort((a, b) => b - a)[0] + 1000
+      );
     })
     .finally(() => {
       // schedule the next run
