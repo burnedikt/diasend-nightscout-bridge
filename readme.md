@@ -1,6 +1,13 @@
 # Diasend -> Nightscout Bridge
 
-Synchronizes continuuous glucose values (CGV) from [diasend] to [nightscout]
+Synchronizes continuuous glucose values (CGV) from [diasend] to [nightscout]. This can e.g. help CamAPS | Fx users to view their treatments and glucose values via nightscout.
+
+## Supported Features / Data
+
+- ✅ Glucose Values (CGM)
+- ✅ Correction and Meal Boli
+- ❌ Calibrations
+- ❌ Pump settings (see [open issue][pump-settings-issue])
 
 ## Configuration
 
@@ -37,6 +44,12 @@ To run the bridge, ensure that all required environment variables are set and si
 yarn start
 ```
 
+## Notes & Known Issues
+
+- Up to 5 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS | Fx only
+exports data to diasend so it can take up to 5 minutes until it will appear in
+nightscout. This delay can be reduced by altering the polling interval (currently only [controllable via source code][change-polling-interval]).
+
 ## Further information
 
 This project works by connecting to **diasend's internal (!) API, which may change at any time without warning, so use with caution**, and pulling the latest number of
@@ -60,3 +73,5 @@ This project is written in Typescript.
 [minimed-connect-to-nightscout]: https://github.com/nightscout/minimed-connect-to-nightscout
 [REST Client plugin]: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
 [diasend2nightscout-bridge]: https://github.com/funkstille/diasend2nightscout-bridge
+[change-polling-interval]: https://github.com/burnedikt/diasend-nightscout-bridge/blob/f29f671dfa74bf9b14ae8610d84c8d58a654c37f/index.ts#L190
+[pump-settings-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/1
