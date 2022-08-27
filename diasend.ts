@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import NodeCache from "node-cache";
 
-export type GlucoseUnit = "mg/dl" | "mmol/l";
+type GlucoseUnit = "mg/dl" | "mmol/l";
 
 const tokenCache = new NodeCache({
   checkperiod: 60, // check every 60 seconds for expired items / tokens
@@ -105,8 +105,7 @@ export async function obtainDiasendAccessToken(
 export async function getPatientData(
   accessToken: string,
   date_from: Date,
-  date_to: Date,
-  unit: GlucoseUnit = "mg/dl"
+  date_to: Date
 ): Promise<PatientRecord[]> {
   const response = await diasendClient.get<
     { data: PatientRecord[]; device: DeviceData }[]
@@ -115,7 +114,7 @@ export async function getPatientData(
       type: "cgm",
       date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
       date_to: dayjs(date_to).format(diasendIsoFormatWithoutTZ),
-      unit: unit.replace("/", "_"),
+      unit: "mg_dl",
     },
     headers: { Authorization: `Bearer ${accessToken}` },
   });

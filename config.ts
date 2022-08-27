@@ -1,5 +1,3 @@
-import { GlucoseUnit } from "./diasend";
-
 const config: {
   diasend: {
     clientId: string;
@@ -10,9 +8,6 @@ const config: {
   nightscout: {
     url?: string;
     apiSecret?: string;
-  };
-  units: {
-    glucose: GlucoseUnit;
   };
 } = {
   diasend: {
@@ -27,9 +22,6 @@ const config: {
   nightscout: {
     url: process.env.NIGHTSCOUT_URL,
     apiSecret: process.env.NIGHTSCOUT_API_SECRET,
-  },
-  units: {
-    glucose: (process.env.GLUCOSE_UNIT as GlucoseUnit) || "mg/dl",
   },
 };
 

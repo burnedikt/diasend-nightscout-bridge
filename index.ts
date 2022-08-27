@@ -4,7 +4,6 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import {
   obtainDiasendAccessToken,
   getPatientData,
-  GlucoseUnit,
   GlucoseRecord,
   CarbRecord,
   BolusRecord,
@@ -31,7 +30,6 @@ function diasendGlucoseRecordToNightscoutEntry(
     sgv: record.value,
     dateString: date.toISOString(),
     date: date.getTime(),
-    units: record.unit === "mmol/l" ? "mmol" : "mg",
     app: "diasend",
     device: `${record.device.model} (${record.device.serial})`,
   };
@@ -50,7 +48,6 @@ interface SyncDiasendDataToNightScoutArgs {
   ) => Promise<Treatment[] | undefined>;
   dateFrom?: Date;
   dateTo?: Date;
-  glucoseUnit?: GlucoseUnit;
 }
 
 async function syncDiasendDataToNightscout({
@@ -64,7 +61,6 @@ async function syncDiasendDataToNightscout({
     await reportTreatmentsToNightscout(treatments),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
-  glucoseUnit = config.units.glucose,
 }: SyncDiasendDataToNightScoutArgs) {
   if (!diasendUsername) {
     throw Error("Diasend Username not configured");
@@ -81,12 +77,7 @@ async function syncDiasendDataToNightscout({
   );
 
   // using the diasend token, now fetch the patient records
-  const records = await getPatientData(
-    diasendAccessToken,
-    dateFrom,
-    dateTo,
-    glucoseUnit
-  );
+  const records = await getPatientData(diasendAccessToken, dateFrom, dateTo);
   console.log(
     "Number of diasend records since",
     dayjs(dateFrom).fromNow(),
@@ -179,7 +170,7 @@ async function syncDiasendDataToNightscout({
 }
 
 // CamAPSFx uploads data to diasend every 5 minutes. (Which is also the time after which new CGM values from Dexcom will be available)
-const interval = 5 * 60 * 1000;
+const interval = 10 * 60 * 1000;
 
 let synchronizationTimeoutId: NodeJS.Timeout | undefined | number;
 export function startSynchronization({

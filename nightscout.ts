@@ -1,7 +1,6 @@
 import axios from "axios";
 import config from "./config";
 import crypto from "crypto";
-import { GlucoseUnit } from "./diasend";
 
 interface Base {
   // Required timestamp when the record or event occured, you can choose from three input formats\n- Unix epoch in milliseconds (1525383610088)\n- Unix epoch in seconds (1525383610)\n- ISO 8601 with optional timezone ('2018-05-03T21:40:10.088Z' or '2018-05-03T23:40:10.088+02:00')\n\nThe date is always stored in a normalized form - UTC with zero offset. If UTC offset was present, it is going to be set in the `utcOffset` field.\n\nNote&#58; this field is immutable by the client (it cannot be updated or patched)
@@ -41,7 +40,6 @@ export interface SensorGlucoseValueEntry extends Entry {
   filtered?: number;
   unfiltered?: number;
   rssi?: number;
-  units: NightscoutGlucoseUnit; // it is highly recommended by nightscout to define units, so we'll make this required.
 }
 
 export interface Treatment extends Base {
@@ -57,8 +55,6 @@ export interface Treatment extends Base {
   glucose?: number;
   // Method used to obtain glucose, Finger or Sensor.
   glucoseType?: "Sensor" | "Finger" | "Manual";
-  // The units for the glucose value, mg/dl or mmol/l. It is strongly recommended to fill in this field when `glucose` is entered.
-  units?: GlucoseUnit;
 }
 
 interface BaseBolusTreatment extends Treatment {
