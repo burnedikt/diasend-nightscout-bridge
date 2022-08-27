@@ -7,21 +7,25 @@ import {
   GlucoseRecord,
   CarbRecord,
   BolusRecord,
-  DeviceData,
+  getPumpSettings,
+  getAuthenticatedScrapingClient,
+  PumpSettings,
 } from "./diasend";
 import {
-  SensorGlucoseValueEntry,
   reportEntriesToNightscout,
   MealBolusTreatment,
   reportTreatmentsToNightscout,
   Treatment,
   CorrectionBolusTreatment,
-  ManualGlucoseValueEntry,
   Entry,
+  Profile,
+  fetchProfile,
+  updateProfile,
 } from "./nightscout";
 import {
   diasendBolusRecordToNightscoutTreatment,
   diasendGlucoseRecordToNightscoutEntry,
+  diasendPumpSettingsToNightscoutProfile,
 } from "./adapter";
 
 dayjs.extend(relativeTime);
@@ -164,15 +168,15 @@ export function startSynchronization({
       );
     })
     .finally(() => {
-      // schedule the next run
-      console.log(
-        `Next run will be in ${dayjs()
-          .add(pollingIntervalMs, "milliseconds")
-          .fromNow()}...`
-      );
       // if synchronizationTimeoutId is set to 0 when we get here, don't schedule a re-run. This is the exit condition
       // and prevents the synchronization loop from continuing if the timeout is cleared while already running the sync
       if (synchronizationTimeoutId !== 0) {
+        // schedule the next run
+        console.log(
+          `Next run will be in ${dayjs()
+            .add(pollingIntervalMs, "milliseconds")
+            .fromNow()}...`
+        );
         synchronizationTimeoutId = setTimeout(() => {
           void startSynchronization({
             pollingIntervalMs,
@@ -187,4 +191,84 @@ export function startSynchronization({
   return () => {
     clearTimeout(synchronizationTimeoutId);
   };
+}
+
+let pumpSettingsSynchronizationTimeoutId: NodeJS.Timeout | undefined | number;
+
+export function startPumpSettingsSynchronization({
+  diasendUsername = config.diasend.username,
+  diasendPassword = config.diasend.password,
+  // per default synchronize every 12 hours
+  pollingIntervalMs = 12 * 3600 * 1000,
+  nightscoutProfileName = config.nightscout.profileName,
+  nightscoutPumpSettingsHandler = (pumpSettings) =>
+    savePumpSettingsInNightscoutProfile(nightscoutProfileName!, pumpSettings),
+}: {
+  diasendUsername?: string;
+  diasendPassword?: string;
+  pollingIntervalMs?: number;
+  nightscoutProfileName?: string;
+  nightscoutPumpSettingsHandler?: (
+    pumpSettings: PumpSettings
+  ) => Promise<Profile>;
+} = {}) {
+  function pumpSynchronizationLoop() {
+    if (!diasendUsername) {
+      throw Error("Diasend Username not configured");
+    }
+    if (!diasendPassword) {
+      throw Error("Diasend Password not configured");
+    }
+
+    if (!nightscoutProfileName) {
+      console.info(
+        "Not synchronizing pump settings to nightscout profile since profile name is not defined"
+      );
+      return;
+    }
+
+    getAuthenticatedScrapingClient({
+      username: diasendUsername,
+      password: diasendPassword,
+    })
+      .then(({ client, userId }) => getPumpSettings(client, userId))
+      .then(nightscoutPumpSettingsHandler)
+      .finally(() => {
+        // restart after specified time
+        // if synchronizationTimeoutId is set to 0 when we get here, don't schedule a re-run. This is the exit condition
+        // and prevents the synchronization loop from continuing if the timeout is cleared while already running the sync
+        if (pumpSettingsSynchronizationTimeoutId !== 0) {
+          console.log(
+            `Next run to synchronize pump settings will be in ${dayjs()
+              .add(pollingIntervalMs, "milliseconds")
+              .fromNow()}...`
+          );
+
+          setTimeout(pumpSynchronizationLoop, pollingIntervalMs);
+        }
+      });
+  }
+
+  void pumpSynchronizationLoop();
+
+  // return a function that can be used to end the loop
+  return () => {
+    clearTimeout(pumpSettingsSynchronizationTimeoutId);
+  };
+}
+
+async function savePumpSettingsInNightscoutProfile(
+  nightscoutProfileName: string,
+  pumpSettings: PumpSettings
+): Promise<Profile> {
+  const profile = await fetchProfile();
+
+  return await updateProfile({
+    ...profile,
+    store: {
+      ...profile.store,
+      [nightscoutProfileName]:
+        diasendPumpSettingsToNightscoutProfile(pumpSettings),
+    },
+  });
 }

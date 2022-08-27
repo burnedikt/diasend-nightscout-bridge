@@ -14,15 +14,22 @@
     "build": "tsc",
     "prepare": "npm run build",
     "run": "yarn build && node dist/run.js",
-    "test": "jest"
+    "test": "cross-env TZ=Europe/Berlin jest"
+  },
+  "engines": {
+    "node": ">=14"
   },
   "devDependencies": {
+    "@types/cheerio": "^0.22.31",
     "@types/jest": "^28.1.8",
     "@types/node": "^18.7.7",
+    "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.32.0",
     "@typescript-eslint/parser": "^5.32.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.21.0",
     "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-unused-imports": "^2.0.0",
     "jest": "^28",
     "prettier": "^2.7.1",
     "ts-jest": "^28.0.8",
@@ -43,7 +50,8 @@
     ],
     "parser": "@typescript-eslint/parser",
     "plugins": [
-      "@typescript-eslint"
+      "@typescript-eslint",
+      "unused-imports"
     ],
     "ignorePatterns": [
       "dist/**"
@@ -52,8 +60,12 @@
   },
   "dependencies": {
     "axios": "^0.27.2",
+    "axios-cookiejar-support": "^2",
+    "cheerio": "^1.0.0-rc.12",
     "dayjs": "^1.11.4",
-    "node-cache": "^5.1.2"
+    "node-cache": "^5.1.2",
+    "rand-user-agent": "^1.0.78",
+    "tough-cookie": "^4.1.2"
   },
   "keywords": [
     "nightscout",

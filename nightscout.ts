@@ -74,8 +74,6 @@ export interface CorrectionBolusTreatment extends BaseBolusTreatment {
   eventType: "Correction Bolus";
 }
 
-export interface BGCheckTreatment extends Treatment {}
-
 export interface MealBolusTreatment extends BaseBolusTreatment {
   eventType: "Meal Bolus";
   // Amount of carbs given.
@@ -131,4 +129,47 @@ export async function reportTreatmentsToNightscout(values: Treatment[]) {
     values
   );
   return response.data;
+}
+
+export interface TimeBasedValue {
+  time: string;
+  timeAsSeconds?: number;
+  value: number;
+}
+
+export interface ProfileConfig {
+  dia: number;
+  carbratio: TimeBasedValue[];
+  sens: TimeBasedValue[];
+  basal: TimeBasedValue[];
+  target_low: TimeBasedValue[];
+  target_high: TimeBasedValue[];
+  startDate?: string;
+  timezone?: string;
+  carbs_hr?: number;
+  delay?: number;
+  units?: "mg/dl" | "mmol/l";
+}
+
+export interface Profile {
+  defaultProfile: string;
+  store: { [profileName: string]: ProfileConfig };
+}
+
+export async function fetchProfile(): Promise<Profile> {
+  const { data } = await getNightscoutClient().get<Profile[]>(
+    "/api/v1/profile"
+  );
+
+  // active profile is always first of profiles
+  return data[0];
+}
+
+export async function updateProfile(profile: Profile): Promise<Profile> {
+  const { data } = await getNightscoutClient().put<Profile>(
+    "/api/v1/profile",
+    profile
+  );
+
+  return data;
 }

@@ -1,9 +1,17 @@
-import { BolusRecord, CarbRecord, DeviceData, GlucoseRecord } from "./diasend";
+import {
+  BolusRecord,
+  CarbRecord,
+  DeviceData,
+  GlucoseRecord,
+  PumpSettings,
+} from "./diasend";
 import {
   CorrectionBolusTreatment,
   ManualGlucoseValueEntry,
   MealBolusTreatment,
+  ProfileConfig,
   SensorGlucoseValueEntry,
+  TimeBasedValue,
 } from "./nightscout";
 
 export function diasendGlucoseRecordToNightscoutEntry(
@@ -97,4 +105,45 @@ export function diasendBolusRecordToNightscoutTreatment(
       return;
     }
   }
+}
+
+function convertToTimeBasedValue([startTime, value]: [
+  string,
+  number
+]): TimeBasedValue {
+  const [hours, minutes, ..._] = startTime.split(":");
+  return {
+    value,
+    time: [hours, minutes].join(":"),
+    timeAsSeconds: parseInt(hours) * 3600 + parseInt(minutes) * 60,
+  };
+}
+
+export function diasendPumpSettingsToNightscoutProfile(
+  pumpSettings: PumpSettings
+): ProfileConfig {
+  return {
+    sens: pumpSettings.insulinSensitivityProfile.map(convertToTimeBasedValue),
+    basal: pumpSettings.basalProfile.map(convertToTimeBasedValue),
+    carbratio: pumpSettings.insulinCarbRatioProfile.map(
+      convertToTimeBasedValue
+    ),
+    target_high: [
+      {
+        time: "00:00",
+        value: pumpSettings.bloodGlucoseTargetHigh,
+        timeAsSeconds: 0,
+      },
+    ],
+    target_low: [
+      {
+        time: "00:00",
+        value: pumpSettings.bloodGlucoseTargetLow,
+        timeAsSeconds: 0,
+      },
+    ],
+    dia: pumpSettings.insulinOnBoardDurationHours,
+    units: pumpSettings.units,
+    timezone: process.env.TZ,
+  };
 }
