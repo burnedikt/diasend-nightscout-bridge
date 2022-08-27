@@ -14,7 +14,6 @@
     "build": "tsc",
     "prepare": "npm run build",
     "run": "ts-node dist/run.js",
-    "test-run": "ts-node dist/test-run.js",
     "test": "jest"
   },
   "devDependencies": {
