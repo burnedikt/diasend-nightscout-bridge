@@ -11,7 +11,7 @@ interface Base {
   app: string;
 }
 
-interface Entry extends Base {
+export interface Entry extends Base {
   type: "sgv" | "mbg" | "cal" | "etc";
   // ISO datestring
   dateString: string;
@@ -42,8 +42,14 @@ export interface SensorGlucoseValueEntry extends Entry {
   rssi?: number;
 }
 
+export interface ManualGlucoseValueEntry extends Entry {
+  type: "mbg";
+  // the (manually measured) blood glucose
+  mbg: number;
+}
+
 export interface Treatment extends Base {
-  eventType: "Meal Bolus" | "Snack Bolus" | "Correction Bolus";
+  eventType: "Meal Bolus" | "Correction Bolus" | "BG Check";
   // Description/notes of treatment.
   notes?: string;
   // Who entered the treatment.
@@ -67,6 +73,8 @@ interface BaseBolusTreatment extends Treatment {
 export interface CorrectionBolusTreatment extends BaseBolusTreatment {
   eventType: "Correction Bolus";
 }
+
+export interface BGCheckTreatment extends Treatment {}
 
 export interface MealBolusTreatment extends BaseBolusTreatment {
   eventType: "Meal Bolus";
@@ -107,11 +115,9 @@ export async function getLatestCgmUpdateOnNightscout() {
   return new Date(repsonse.data[0].date);
 }
 
-export async function reportEntriesToNightscout(
-  values: SensorGlucoseValueEntry[]
-) {
-  if (!values.length) return;
-  const response = await getNightscoutClient().post<SensorGlucoseValueEntry[]>(
+export async function reportEntriesToNightscout(values: Entry[]) {
+  if (!values.length) return [];
+  const response = await getNightscoutClient().post<Entry[]>(
     "/api/v1/entries/",
     values
   );
@@ -119,7 +125,7 @@ export async function reportEntriesToNightscout(
 }
 
 export async function reportTreatmentsToNightscout(values: Treatment[]) {
-  if (!values.length) return;
+  if (!values.length) return [];
   const response = await getNightscoutClient().post<Treatment[]>(
     "/api/v1/treatments/",
     values

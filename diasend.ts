@@ -25,7 +25,6 @@ interface TokenResponse {
 export interface BaseRecord {
   created_at: string;
   flags: { flag: number; description: string }[];
-  device: DeviceData;
 }
 
 export interface GlucoseRecord extends BaseRecord {
@@ -42,7 +41,7 @@ export interface BolusRecord extends BaseRecord {
   total_value: number;
   spike_value: number;
   suggested: number;
-  suggestion_overriden: YesOrNo;
+  suggestion_overridden: YesOrNo;
   suggestion_based_on_bg: YesOrNo;
   suggestion_based_on_carb: YesOrNo;
   programmed_meal?: number;
@@ -62,7 +61,7 @@ export interface BasalRecord extends BaseRecord {
 
 type PatientRecord = GlucoseRecord | BolusRecord | BasalRecord | CarbRecord;
 
-interface DeviceData {
+export interface DeviceData {
   serial: string;
   manufacturer: string;
   model: string;
@@ -102,30 +101,25 @@ export async function obtainDiasendAccessToken(
   return token;
 }
 
+type DiasendCGMResponse = { data: PatientRecord[]; device: DeviceData }[];
+
 export async function getPatientData(
   accessToken: string,
   date_from: Date,
   date_to: Date
-): Promise<PatientRecord[]> {
-  const response = await diasendClient.get<
-    { data: PatientRecord[]; device: DeviceData }[]
-  >("/patient/data", {
-    params: {
-      type: "cgm",
-      date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
-      date_to: dayjs(date_to).format(diasendIsoFormatWithoutTZ),
-      unit: "mg_dl",
-    },
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+): Promise<DiasendCGMResponse> {
+  const response = await diasendClient.get<DiasendCGMResponse>(
+    "/patient/data",
+    {
+      params: {
+        type: "cgm",
+        date_from: dayjs(date_from).format(diasendIsoFormatWithoutTZ),
+        date_to: dayjs(date_to).format(diasendIsoFormatWithoutTZ),
+        unit: "mg_dl",
+      },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
 
-  return response.data.reduce<PatientRecord[]>((records, recordsPerDevice) => {
-    records.push(
-      ...recordsPerDevice.data.map((r) => ({
-        ...r,
-        device: recordsPerDevice.device,
-      }))
-    );
-    return records;
-  }, []);
+  return response.data;
 }

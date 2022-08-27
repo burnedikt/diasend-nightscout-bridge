@@ -17,6 +17,20 @@
         "${workspaceFolder}/dist/**/*.js"
       ],
       "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Test-Run Bridge (Debug)",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/dist/test-run.js",
+      "preLaunchTask": "npm: build",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "envFile": "${workspaceFolder}/.env"
     }
   ]
 }
