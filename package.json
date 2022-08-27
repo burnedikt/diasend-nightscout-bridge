@@ -14,7 +14,7 @@
     "build": "tsc",
     "prepare": "npm run build",
     "run": "yarn build && node dist/run.js",
-    "test": "jest"
+    "test": "cross-env TZ=Europe/Berlin jest"
   },
   "engines": {
     "node": ">=14"
@@ -26,8 +26,10 @@
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.32.0",
     "@typescript-eslint/parser": "^5.32.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.21.0",
     "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-unused-imports": "^2.0.0",
     "jest": "^28",
     "prettier": "^2.7.1",
     "ts-jest": "^28.0.8",
@@ -48,7 +50,8 @@
     ],
     "parser": "@typescript-eslint/parser",
     "plugins": [
-      "@typescript-eslint"
+      "@typescript-eslint",
+      "unused-imports"
     ],
     "ignorePatterns": [
       "dist/**"

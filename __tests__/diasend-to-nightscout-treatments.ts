@@ -1,13 +1,6 @@
-import {
-  diasendBolusRecordToNightscoutTreatment,
-  diasendGlucoseRecordToNightscoutEntry,
-} from "../adapter";
-import { BolusRecord, CarbRecord, DeviceData, GlucoseRecord } from "../diasend";
-import {
-  CorrectionBolusTreatment,
-  MealBolusTreatment,
-  SensorGlucoseValueEntry,
-} from "../nightscout";
+import { diasendBolusRecordToNightscoutTreatment } from "../adapter";
+import { BolusRecord, CarbRecord, DeviceData } from "../diasend";
+import { CorrectionBolusTreatment, MealBolusTreatment } from "../nightscout";
 
 const testDevice: DeviceData = {
   manufacturer: "ACME",
@@ -16,19 +9,6 @@ const testDevice: DeviceData = {
 };
 
 describe("testing conversion of diasend patient data to nightscout treatments", () => {
-  const ORIGINAL_TZ = process.env.TZ;
-
-  beforeEach(() => {
-    // set the timezone explicitly to avoid any conversion issues of non-timezone aware diasend dates
-    jest.resetModules();
-    process.env.TZ = "Europe/Berlin";
-  });
-
-  afterAll(() => {
-    // restore original timezone
-    process.env.TZ = ORIGINAL_TZ;
-  });
-
   test("meal bolus + carbs", () => {
     // given a meal bolus and matching carb record
     const mealBolusRecord: BolusRecord = {

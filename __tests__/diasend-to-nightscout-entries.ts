@@ -12,19 +12,6 @@ const testDevice: DeviceData = {
 };
 
 describe("testing conversion of diasend patient data to nightscout entries", () => {
-  const ORIGINAL_TZ = process.env.TZ;
-
-  beforeEach(() => {
-    // set the timezone explicitly to avoid any conversion issues of non-timezone aware diasend dates
-    jest.resetModules();
-    process.env.TZ = "Europe/Berlin";
-  });
-
-  afterAll(() => {
-    // restore original timezone
-    process.env.TZ = ORIGINAL_TZ;
-  });
-
   test("continuous reading", () => {
     // given a continuous glucose reading from diasend
     const glucoseReading: GlucoseRecord = {

@@ -21,7 +21,6 @@ import {
   Profile,
   fetchProfile,
   updateProfile,
-  TimeBasedValue,
 } from "./nightscout";
 import {
   diasendBolusRecordToNightscoutTreatment,

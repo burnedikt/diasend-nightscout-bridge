@@ -74,8 +74,6 @@ export interface CorrectionBolusTreatment extends BaseBolusTreatment {
   eventType: "Correction Bolus";
 }
 
-export interface BGCheckTreatment extends Treatment {}
-
 export interface MealBolusTreatment extends BaseBolusTreatment {
   eventType: "Meal Bolus";
   // Amount of carbs given.
