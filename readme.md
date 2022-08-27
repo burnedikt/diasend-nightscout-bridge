@@ -22,6 +22,7 @@ The following environment variables are required, also see [example.env](./.env.
 
 Optionally, you can also provide the following values:
 
+- `TZ`: the timezone from which the glucose values have been sent to diasend. If you run this project on your local machine, this configuration will likely not be necessary. If your run it on a dedicated server, though it must be configured to avoid an [offset in the data due to timezone issues]. Usually the timezone in which your device exporting data to diasend is.
 - `DIASEND_CLIENT_ID`: client id for authorization against diasend. Defaults to `a486o3nvdu88cg0sos4cw8cccc0o0cg.api.diasend.com`
 - `DIASEND_CLIENT_SECRET`: client secret for authorization against diasend. Defaults to `8imoieg4pyos04s44okoooowkogsco4`
 - `GLUCOSE_UNIT`: units to use for glucose values. Can be either `mg/dl` or `mmol/l`. Glucose values will be obtained from diasend with this unit and pushed to nightscout accordingly.
@@ -51,6 +52,8 @@ yarn start
 - Up to 5 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS | Fx only
 exports data to diasend so it can take up to 5 minutes until it will appear in
 nightscout. This delay can be reduced by altering the polling interval (currently only [controllable via source code][change-polling-interval]).
+- Timezone issues: The timezone of the server / computer running this project
+  needs to match the timezone in which the values were sent to diasend, i.e. the timezone of the device generating the data for diasend, see also the [configuration section above](#configuration)
 
 ## Further information
 
