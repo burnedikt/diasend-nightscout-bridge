@@ -6,11 +6,11 @@ While diasend will eventually be replaced by glooko which will provide a more op
 
 ## Supported Features / Data
 
-- ✅ Glucose Values (CGM)
-- ✅ Correction and Meal Boli
-- ❌ Calibrations
-- ❌ Basal rates
-- ❌ Pump settings (see [open issue][pump-settings-issue])
+✅ Glucose Values (CGM) <br />
+✅ Correction and Meal Boli <br />
+✅ Basal rates <br />
+✅ Pump settings (see [issue][pump-settings-issue])
+
 
 ## Configuration
 
