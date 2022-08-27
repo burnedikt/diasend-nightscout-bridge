@@ -178,11 +178,25 @@ export async function getAuthenticatedScrapingClient({
   }
 }
 
-export async function getPumpSettings(client: AxiosInstance, userId: string) {
+interface PumpSettings {
+  basalProfile: [string, number][];
+  insulinCarbRatioProfile: [string, number][];
+  insulinSensitivityProfile: [string, number][];
+  bloodGlucoseTargetLow: number;
+  bloodGlucoseTargetHigh: number;
+  insulinOnBoardDurationHours: number;
+  units: "mg/dl" | "mmol/l";
+}
+
+export async function getPumpSettings(
+  client: AxiosInstance,
+  userId: string
+): Promise<PumpSettings> {
   const { data } = await client.get<string>(
     `/reports/${userId}/insulin/pump-settings`
   );
   const $ = load(data);
+
   // find the active basal profile
   const activeBasalProfile = $("td")
     .filter((_, ele) => $(ele).text() === "Active basal program")
@@ -206,5 +220,82 @@ export async function getPumpSettings(client: AxiosInstance, userId: string) {
       )
       .get() as [string, string][]
   ).map(([startTime, rate]) => [startTime, parseFloat(rate)]);
-  return basalProfile;
+
+  // identify the carbs ratio (I:C)
+  const insulinCarbRatioProfile: [string, number][] = (
+    $("h3")
+      .filter((_, e) => $(e).text() === "I:C ratio settings")
+      .next("table")
+      .find("table")
+      .find("tr:not(:first)")
+      .map((_, row) =>
+        $(row)
+          // get all cells of a row
+          .children("td")
+          // take only the last two cells (start time and rate)
+          .slice(-2)
+          .map((_, cell) => $(cell).text())
+      )
+      .get() as [string, string][]
+  ).map(([startTime, rate]) => [startTime, parseFloat(rate)]);
+
+  // identify the insulin sensitivity factor(s)
+  const insulinSensitivityProfile: [string, number][] = (
+    $("h3")
+      .filter((_, e) => $(e).text() === "ISF programs")
+      .next("table")
+      .find("table")
+      .find("tr:not(:first)")
+      .map((_, row) =>
+        $(row)
+          // get all cells of a row
+          .children("td")
+          // take only the last two cells (start time and rate)
+          .slice(-2)
+          .map((_, cell) => $(cell).text())
+      )
+      .get() as [string, string][]
+  ).map(([startTime, rate]) => [startTime, parseFloat(rate)]);
+
+  // lower goal of blood glucose
+  const bloodGlucoseTargetLowElement = $("td")
+    .filter((_, ele) => $(ele).text() === "BG goal low")
+    .next()
+    .text();
+  const bloodGlucoseTargetLow = parseInt(
+    bloodGlucoseTargetLowElement.split(" ")[0]
+  );
+
+  const units =
+    bloodGlucoseTargetLowElement.split(" ")[1].toLowerCase() === "mg/dl"
+      ? "mg/dl"
+      : "mmol/l";
+
+  // high goal of blood glucose
+  const bloodGlucoseTargetHigh = parseInt(
+    $("td")
+      .filter((_, ele) => $(ele).text() === "BG goal high")
+      .next()
+      .text()
+      .split(" ")[0]
+  );
+
+  // insulin on board duration
+  const iobDurationHours = parseInt(
+    $("td")
+      .filter((_, ele) => $(ele).text() === "Insulin-On-Board Duration")
+      .next()
+      .text()
+      .split(" ")[0]
+  );
+
+  return {
+    basalProfile,
+    insulinCarbRatioProfile,
+    insulinSensitivityProfile,
+    bloodGlucoseTargetLow,
+    bloodGlucoseTargetHigh,
+    insulinOnBoardDurationHours: iobDurationHours,
+    units,
+  };
 }
