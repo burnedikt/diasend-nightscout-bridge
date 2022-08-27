@@ -942,12 +942,12 @@ asynckit@^0.4.0:
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
   integrity sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==
 
-axios-cookiejar-support@^4.0.3:
-  version "4.0.3"
-  resolved "https://registry.yarnpkg.com/axios-cookiejar-support/-/axios-cookiejar-support-4.0.3.tgz#c906029d76c7c185224ab00f97c64ce5e241ac4f"
-  integrity sha512-fMQc0mPR1CikWZEwVC6Av+sD4cJuV2eo06HFA+DfhY54uRcO43ILGxaq7YAMTiM0V0SdJCV4NhE1bOsQYlfSkg==
+axios-cookiejar-support@^2:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/axios-cookiejar-support/-/axios-cookiejar-support-2.0.5.tgz#f8370c41de34aaa5b482b5d9d6439fd535b1c4d3"
+  integrity sha512-y5S8feB6SbITWEiisCqFzQWaob+M34vVz8sP5KmQTDovM7HJ8xG9KQIETh0bFRyXUfDzWR5aPzfgkTND0wuYvQ==
   dependencies:
-    http-cookie-agent "^4.0.2"
+    http-cookie-agent "^1.0.6"
 
 axios@^0.27.2:
   version "0.27.2"
@@ -1788,10 +1788,10 @@ htmlparser2@^8.0.1:
     domutils "^3.0.1"
     entities "^4.3.0"
 
-http-cookie-agent@^4.0.2:
-  version "4.0.2"
-  resolved "https://registry.yarnpkg.com/http-cookie-agent/-/http-cookie-agent-4.0.2.tgz#dcdaae18ed1f7452d81ae4d5cd80b227d6831b69"
-  integrity sha512-noTmxdH5CuytTnLj/Qv3Z84e/YFq8yLXAw3pqIYZ25Edhb9pQErIAC+ednw40Cic6Le/h9ryph5/TqsvkOaUCw==
+http-cookie-agent@^1.0.6:
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/http-cookie-agent/-/http-cookie-agent-1.0.6.tgz#4d11436be06e4b2e00ee2e729a2abd79d969e639"
+  integrity sha512-Ei0BDjMfy6MSXATmCZ5nWr935NLYl6eD/BTxVGOIrKAlg4xDtMdk+8a+caq6Qwa4FACn+vACj89pFKlXmHOnkQ==
   dependencies:
     agent-base "^6.0.2"
 
