@@ -1,3 +1,4 @@
-import { startSynchronization } from ".";
+import { startPumpSettingsSynchronization, startSynchronization } from ".";
 
-void startSynchronization();
+startSynchronization();
+startPumpSettingsSynchronization();

@@ -178,7 +178,7 @@ export async function getAuthenticatedScrapingClient({
   }
 }
 
-interface PumpSettings {
+export interface PumpSettings {
   basalProfile: [string, number][];
   insulinCarbRatioProfile: [string, number][];
   insulinSensitivityProfile: [string, number][];

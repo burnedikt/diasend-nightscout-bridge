@@ -24,6 +24,7 @@ The following environment variables are required, also see [example.env](./.env.
 Optionally, you can also provide the following values:
 
 - `TZ`: the timezone from which the glucose values have been sent to diasend. If you run this project on your local machine, this configuration will likely not be necessary. If your run it on a dedicated server, though it must be configured to avoid an [offset in the data due to timezone issues]. Usually the timezone in which your device exporting data to diasend is.
+- `NIGHTSCOUT_PROFILE_NAME`: The name of the profile in nightscout to which to synchronize the diasend pump settings. Defaults to undefined which means the pump settings will not be synchronized. When set, the specified profile will be overwritten with the settings from diasend so be careful.
 - `DIASEND_CLIENT_ID`: client id for authorization against diasend. Defaults to `a486o3nvdu88cg0sos4cw8cccc0o0cg.api.diasend.com`
 - `DIASEND_CLIENT_SECRET`: client secret for authorization against diasend. Defaults to `8imoieg4pyos04s44okoooowkogsco4`
 

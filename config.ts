@@ -8,6 +8,7 @@ const config: {
   nightscout: {
     url?: string;
     apiSecret?: string;
+    profileName?: string;
   };
 } = {
   diasend: {
@@ -22,6 +23,7 @@ const config: {
   nightscout: {
     url: process.env.NIGHTSCOUT_URL,
     apiSecret: process.env.NIGHTSCOUT_API_SECRET,
+    profileName: process.env.NIGHTSCOUT_PROFILE_NAME,
   },
 };
 
