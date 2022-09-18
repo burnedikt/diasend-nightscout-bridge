@@ -5,9 +5,11 @@ import {
   CarbRecord,
   DeviceData,
   GlucoseRecord,
+  PatientRecord,
   PumpSettings,
 } from "./diasend";
 import {
+  CarbCorrectionTreatment,
   CorrectionBolusTreatment,
   ManualGlucoseValueEntry,
   MealBolusTreatment,
@@ -50,11 +52,62 @@ export function diasendGlucoseRecordToNightscoutEntry(
   }
 }
 
-export function diasendBolusRecordToNightscoutTreatment(
-  record: BolusRecord,
+// carbs should have been recorded within the next minute after a meal bolus
+const diasendBolusCarbTimeDifferenceThresholdMilliseconds = 60 * 1000;
+const nightscoutApp = "diasend";
+
+function doCarbsBelongToBolus(
+  carbRecord: CarbRecord,
+  others: (CarbRecord | BolusRecord)[]
+) {
+  return !!others
+    .filter<BolusRecord>(
+      (r): r is BolusRecord =>
+        r.type === "insulin_bolus" && "programmed_meal" in r
+    )
+    .find((bolusRecord) =>
+      isRecordCreatedWithinTimeSpan(
+        carbRecord,
+        bolusRecord,
+        diasendBolusCarbTimeDifferenceThresholdMilliseconds
+      )
+    );
+}
+
+function isRecordCreatedWithinTimeSpan(
+  r1: PatientRecord,
+  r2: PatientRecord,
+  timespanMilliseconds: number
+) {
+  return (
+    dayjs(r1.created_at) > dayjs(r2.created_at) &&
+    dayjs(r1.created_at).diff(r2.created_at) <= timespanMilliseconds
+  );
+}
+
+export function diasendRecordToNightscoutTreatment(
+  record: BolusRecord | CarbRecord,
   allRecords: (BolusRecord | CarbRecord)[],
   device: DeviceData
-): MealBolusTreatment | CorrectionBolusTreatment | undefined {
+):
+  | MealBolusTreatment
+  | CorrectionBolusTreatment
+  | CarbCorrectionTreatment
+  | undefined {
+  // if there's a carb record, check if there's a preceeding (meal) bolus record
+  if (record.type == "carb") {
+    // if so, it's a meal / snack bolus and already handled
+    if (doCarbsBelongToBolus(record, allRecords)) return undefined;
+    // if not so, it's a hypoglycaemia treatment and we need to create a treatment for it
+    return {
+      eventType: "Carb Correction",
+      carbs: parseInt(record.value),
+      app: nightscoutApp,
+      date: new Date(record.created_at).getTime(),
+      device: `${device.model} (${device.serial})`,
+    };
+  }
+
   const bolusRecord = record;
   // for a (meal) bolus, find the corresponding carbs record, if any
   // the carbs record is usually added ~1 minute later to diasend than the bolus for some reason
@@ -62,14 +115,17 @@ export function diasendBolusRecordToNightscoutTreatment(
   const isMealBolus = "programmed_meal" in bolusRecord;
   if (isMealBolus) {
     const carbRecord = allRecords
-      .filter<CarbRecord>((r): r is CarbRecord => r.type === "carb")
+      .filter<CarbRecord>(
+        (record): record is CarbRecord => record.type === "carb"
+      )
       .find(
-        (r) =>
-          // carbs should have been recorded within the next minute after bolus
-          new Date(r.created_at) > new Date(bolusRecord.created_at) &&
-          new Date(r.created_at).getTime() -
-            new Date(bolusRecord.created_at).getTime() <=
-            60 * 1000
+        // carbs should have been recorded within the next minute after bolus
+        (carbRecord) =>
+          isRecordCreatedWithinTimeSpan(
+            carbRecord,
+            bolusRecord,
+            diasendBolusCarbTimeDifferenceThresholdMilliseconds
+          )
       );
 
     const notesParts = [];
@@ -89,7 +145,7 @@ export function diasendBolusRecordToNightscoutTreatment(
       insulin: bolusRecord.total_value,
       carbs: !carbRecord ? undefined : parseInt(carbRecord.value),
       notes: notesParts.length ? notesParts.join(", ") : undefined,
-      app: "diasend",
+      app: nightscoutApp,
       date: new Date(bolusRecord.created_at).getTime(),
       device: `${device.model} (${device.serial})`,
     };
@@ -98,7 +154,7 @@ export function diasendBolusRecordToNightscoutTreatment(
       return {
         eventType: "Correction Bolus",
         insulin: bolusRecord.programmed_bg_correction,
-        app: "diasend",
+        app: nightscoutApp,
         date: new Date(bolusRecord.created_at).getTime(),
         device: `${device.model} (${device.serial})`,
       };

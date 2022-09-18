@@ -49,7 +49,7 @@ export interface ManualGlucoseValueEntry extends Entry {
 }
 
 export interface Treatment extends Base {
-  eventType: "Meal Bolus" | "Correction Bolus" | "BG Check";
+  eventType: "Meal Bolus" | "Correction Bolus" | "BG Check" | "Carb Correction";
   // Description/notes of treatment.
   notes?: string;
   // Who entered the treatment.
@@ -82,6 +82,12 @@ export interface MealBolusTreatment extends BaseBolusTreatment {
   protein?: number;
   // Amount of fat given.
   fat?: number;
+}
+
+export interface CarbCorrectionTreatment extends Treatment {
+  eventType: "Carb Correction";
+  // Amount of carbs given.
+  carbs?: number;
 }
 
 function getNightscoutClient(apiSecret = config.nightscout.apiSecret) {

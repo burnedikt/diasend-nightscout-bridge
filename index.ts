@@ -11,6 +11,9 @@ import {
   getAuthenticatedScrapingClient,
   PumpSettings,
   BasalRecord,
+  BaseRecord,
+  PatientRecord,
+  DeviceData,
 } from "./diasend";
 import {
   reportEntriesToNightscout,
@@ -24,9 +27,10 @@ import {
   updateProfile,
   TimeBasedValue,
   ProfileConfig,
+  CarbCorrectionTreatment,
 } from "./nightscout";
 import {
-  diasendBolusRecordToNightscoutTreatment,
+  diasendRecordToNightscoutTreatment,
   diasendGlucoseRecordToNightscoutEntry,
   diasendPumpSettingsToNightscoutProfile,
   updateBasalProfile,
@@ -46,6 +50,36 @@ interface SyncDiasendDataToNightScoutArgs {
   ) => Promise<Treatment[]>;
   dateFrom?: Date;
   dateTo?: Date;
+}
+
+export function identifyTreatments(
+  records: PatientRecord[],
+  device: DeviceData
+) {
+  return records
+    .filter<CarbRecord | BolusRecord>(
+      (record): record is CarbRecord | BolusRecord =>
+        ["insulin_bolus", "carb"].includes(record.type)
+    )
+    .reduce<
+      (
+        | MealBolusTreatment
+        | CorrectionBolusTreatment
+        | CarbCorrectionTreatment
+      )[]
+    >((treatments, record, _index, allRecords) => {
+      const treatment = diasendRecordToNightscoutTreatment(
+        record,
+        allRecords,
+        device
+      );
+
+      if (treatment) {
+        treatments.push(treatment);
+      }
+
+      return treatments;
+    }, []);
 }
 
 async function syncDiasendDataToNightscout({
@@ -98,29 +132,11 @@ async function syncDiasendDataToNightscout({
           diasendGlucoseRecordToNightscoutEntry(record, device)
         );
 
-      // handle insulin boli
-      const nightscoutTreatments: Treatment[] = records
-        .filter<CarbRecord | BolusRecord>(
-          (record): record is CarbRecord | BolusRecord =>
-            ["insulin_bolus", "carb"].includes(record.type)
-        )
-        .reduce<(MealBolusTreatment | CorrectionBolusTreatment)[]>(
-          (treatments, record, _index, allRecords) => {
-            // we only care about boli
-            if (record.type === "carb") {
-              return treatments;
-            }
-
-            const treatment = diasendBolusRecordToNightscoutTreatment(
-              record,
-              allRecords,
-              device
-            );
-
-            return treatment ? [...treatments, treatment] : treatments;
-          },
-          []
-        );
+      // handle insulin boli and carbs
+      const nightscoutTreatments: Treatment[] = identifyTreatments(
+        records,
+        device
+      );
 
       // handle basal rates
       const existingProfile = await nightscoutProfileLoader();

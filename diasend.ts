@@ -27,6 +27,7 @@ interface TokenResponse {
 }
 
 export interface BaseRecord {
+  type: "insulin_bolus" | "insulin_basal" | "glucose" | "carb";
   created_at: string;
   flags: { flag: number; description: string }[];
 }
@@ -63,7 +64,11 @@ export interface BasalRecord extends BaseRecord {
   value: number;
 }
 
-type PatientRecord = GlucoseRecord | BolusRecord | BasalRecord | CarbRecord;
+export type PatientRecord =
+  | GlucoseRecord
+  | BolusRecord
+  | BasalRecord
+  | CarbRecord;
 
 export interface DeviceData {
   serial: string;
