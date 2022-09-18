@@ -23,6 +23,7 @@ import {
   fetchProfile,
   updateProfile,
   TimeBasedValue,
+  ProfileConfig,
 } from "./nightscout";
 import {
   diasendBolusRecordToNightscoutTreatment,
@@ -123,13 +124,16 @@ async function syncDiasendDataToNightscout({
 
       // handle basal rates
       const existingProfile = await nightscoutProfileLoader();
-      const existingProfileConfig =
-        existingProfile.store[nightscoutProfileName] || {};
+      const existingProfileConfig: ProfileConfig =
+        nightscoutProfileName in existingProfile.store
+          ? existingProfile.store[nightscoutProfileName]
+          : existingProfile.store[existingProfile.defaultProfile];
+      const basalRecords = records.filter<BasalRecord>(
+        (record): record is BasalRecord => record.type === "insulin_basal"
+      );
       const updatedBasalProfile = updateBasalProfile(
-        existingProfile.store[nightscoutProfileName].basal || [],
-        records.filter<BasalRecord>(
-          (record): record is BasalRecord => record.type === "insulin_basal"
-        )
+        existingProfileConfig.basal || [],
+        basalRecords
       );
       const updatedProfile: Profile = {
         ...existingProfile,
@@ -180,7 +184,8 @@ export function startSynchronization({
   ...syncArgs
 }: {
   pollingIntervalMs?: number;
-} & SyncDiasendDataToNightScoutArgs = {}) {
+} & SyncDiasendDataToNightScoutArgs &
+  NightscoutProfileOptions = {}) {
   let nextDateFrom: Date = dateFrom;
   syncDiasendDataToNightscout({ dateFrom, ...syncArgs })
     .then(({ entries, treatments }) => {
