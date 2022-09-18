@@ -1,4 +1,6 @@
+import dayjs from "dayjs";
 import {
+  BasalRecord,
   BolusRecord,
   CarbRecord,
   DeviceData,
@@ -146,4 +148,45 @@ export function diasendPumpSettingsToNightscoutProfile(
     units: pumpSettings.units,
     timezone: process.env.TZ,
   };
+}
+
+export function convertBasalRecord(basalRecord: BasalRecord): TimeBasedValue {
+  const recordTime = dayjs(basalRecord.created_at);
+  const recordTimeAsSeconds = recordTime.diff(
+    recordTime.startOf("day"),
+    "seconds"
+  );
+  return {
+    time: recordTime.format(recordTime.get("seconds") ? "HH:mm:ss" : "HH:mm"),
+    timeAsSeconds: recordTimeAsSeconds,
+    value: basalRecord.value,
+  };
+}
+
+export function updateBasalProfile(
+  basalProfile: TimeBasedValue[],
+  basalRecords: BasalRecord[]
+): TimeBasedValue[] {
+  let updatedBasalProfile = [...basalProfile];
+
+  // ensure the basalRecords are sorted ascending by their datetime
+  basalRecords
+    .sort((b1, b2) => dayjs(b1.created_at).diff(dayjs(b2.created_at)))
+    .forEach((basalRecord) => {
+      const recordTime = dayjs(basalRecord.created_at);
+      const recordTimeAsSeconds = recordTime.diff(
+        recordTime.startOf("day"),
+        "seconds"
+      );
+      // delete all entries in the current basal profile after the record
+      updatedBasalProfile = updatedBasalProfile.filter(
+        (entry) =>
+          entry.timeAsSeconds !== undefined &&
+          entry.timeAsSeconds < recordTimeAsSeconds
+      );
+      // add the new entry
+      updatedBasalProfile.push(convertBasalRecord(basalRecord));
+    });
+
+  return updatedBasalProfile;
 }

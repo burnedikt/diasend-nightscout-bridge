@@ -10,6 +10,7 @@ import {
   getPumpSettings,
   getAuthenticatedScrapingClient,
   PumpSettings,
+  BasalRecord,
 } from "./diasend";
 import {
   reportEntriesToNightscout,
@@ -21,11 +22,14 @@ import {
   Profile,
   fetchProfile,
   updateProfile,
+  TimeBasedValue,
+  ProfileConfig,
 } from "./nightscout";
 import {
   diasendBolusRecordToNightscoutTreatment,
   diasendGlucoseRecordToNightscoutEntry,
   diasendPumpSettingsToNightscoutProfile,
+  updateBasalProfile,
 } from "./adapter";
 
 dayjs.extend(relativeTime);
@@ -35,6 +39,7 @@ interface SyncDiasendDataToNightScoutArgs {
   diasendPassword?: string;
   diasendClientId?: string;
   diasendClientSecret?: string;
+  nightscoutProfileName?: string;
   nightscoutEntriesHandler?: (entries: Entry[]) => Promise<Entry[]>;
   nightscoutTreatmentsHandler?: (
     treatments: Treatment[]
@@ -48,13 +53,15 @@ async function syncDiasendDataToNightscout({
   diasendPassword = config.diasend.password,
   diasendClientId = config.diasend.clientId,
   diasendClientSecret = config.diasend.clientSecret,
-  nightscoutEntriesHandler = async (entries) =>
-    await reportEntriesToNightscout(entries),
-  nightscoutTreatmentsHandler = async (treatments) =>
-    await reportTreatmentsToNightscout(treatments),
+  nightscoutEntriesHandler = (entries) => reportEntriesToNightscout(entries),
+  nightscoutTreatmentsHandler = (treatments) =>
+    reportTreatmentsToNightscout(treatments),
+  nightscoutProfileName = config.nightscout.profileName!,
+  nightscoutProfileHandler = (profile) => updateProfile(profile),
+  nightscoutProfileLoader = () => fetchProfile(),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
-}: SyncDiasendDataToNightScoutArgs) {
+}: SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions) {
   if (!diasendUsername) {
     throw Error("Diasend Username not configured");
   }
@@ -115,16 +122,41 @@ async function syncDiasendDataToNightscout({
           []
         );
 
+      // handle basal rates
+      const existingProfile = await nightscoutProfileLoader();
+      const existingProfileConfig: ProfileConfig =
+        nightscoutProfileName in existingProfile.store
+          ? existingProfile.store[nightscoutProfileName]
+          : existingProfile.store[existingProfile.defaultProfile];
+      const basalRecords = records.filter<BasalRecord>(
+        (record): record is BasalRecord => record.type === "insulin_basal"
+      );
+      const updatedBasalProfile = updateBasalProfile(
+        existingProfileConfig.basal || [],
+        basalRecords
+      );
+      const updatedProfile: Profile = {
+        ...existingProfile,
+        store: {
+          ...existingProfile.store,
+          [nightscoutProfileName]: {
+            ...existingProfileConfig,
+            basal: updatedBasalProfile,
+          },
+        },
+      };
+
       console.log(`Sending ${nightscoutEntries.length} entries to nightscout`);
       console.log(
         `Sending ${nightscoutTreatments.length} treatments to nightscout`
       );
       // send them to nightscout
-      const [entries, treatments] = await Promise.all([
+      const [entries, treatments, profile] = await Promise.all([
         nightscoutEntriesHandler(nightscoutEntries),
         nightscoutTreatmentsHandler(nightscoutTreatments),
+        nightscoutProfileHandler(updatedProfile),
       ]);
-      return { entries: entries ?? [], treatments: treatments ?? [] };
+      return { entries: entries ?? [], treatments: treatments ?? [], profile };
     })
   );
 
@@ -152,7 +184,8 @@ export function startSynchronization({
   ...syncArgs
 }: {
   pollingIntervalMs?: number;
-} & SyncDiasendDataToNightScoutArgs = {}) {
+} & SyncDiasendDataToNightScoutArgs &
+  NightscoutProfileOptions = {}) {
   let nextDateFrom: Date = dateFrom;
   syncDiasendDataToNightscout({ dateFrom, ...syncArgs })
     .then(({ entries, treatments }) => {
@@ -195,23 +228,28 @@ export function startSynchronization({
 
 let pumpSettingsSynchronizationTimeoutId: NodeJS.Timeout | undefined | number;
 
+type NightscoutProfileOptions = {
+  nightscoutProfileName?: string;
+  nightscoutProfileLoader?: () => Promise<Profile>;
+  nightscoutProfileHandler?: (profile: Profile) => Promise<Profile>;
+};
+
 export function startPumpSettingsSynchronization({
   diasendUsername = config.diasend.username,
   diasendPassword = config.diasend.password,
   // per default synchronize every 12 hours
   pollingIntervalMs = 12 * 3600 * 1000,
   nightscoutProfileName = config.nightscout.profileName,
-  nightscoutPumpSettingsHandler = (pumpSettings) =>
-    savePumpSettingsInNightscoutProfile(nightscoutProfileName!, pumpSettings),
+  nightscoutProfileLoader = async () => await fetchProfile(),
+  nightscoutProfileHandler = async (profile: Profile) =>
+    await updateProfile(profile),
+  importBasalRate = true,
 }: {
   diasendUsername?: string;
   diasendPassword?: string;
   pollingIntervalMs?: number;
-  nightscoutProfileName?: string;
-  nightscoutPumpSettingsHandler?: (
-    pumpSettings: PumpSettings
-  ) => Promise<Profile>;
-} = {}) {
+  importBasalRate?: boolean;
+} & NightscoutProfileOptions = {}) {
   function pumpSynchronizationLoop() {
     if (!diasendUsername) {
       throw Error("Diasend Username not configured");
@@ -232,7 +270,14 @@ export function startPumpSettingsSynchronization({
       password: diasendPassword,
     })
       .then(({ client, userId }) => getPumpSettings(client, userId))
-      .then(nightscoutPumpSettingsHandler)
+      .then(async (pumpSettings) =>
+        updateNightScoutProfileWithPumpSettings(
+          await nightscoutProfileLoader(),
+          pumpSettings,
+          { importBasalRate, nightscoutProfileName }
+        )
+      )
+      .then(nightscoutProfileHandler)
       .finally(() => {
         // restart after specified time
         // if synchronizationTimeoutId is set to 0 when we get here, don't schedule a re-run. This is the exit condition
@@ -257,18 +302,33 @@ export function startPumpSettingsSynchronization({
   };
 }
 
-async function savePumpSettingsInNightscoutProfile(
-  nightscoutProfileName: string,
-  pumpSettings: PumpSettings
-): Promise<Profile> {
-  const profile = await fetchProfile();
+function updateNightScoutProfileWithPumpSettings(
+  existingProfile: Profile,
+  pumpSettings: PumpSettings,
+  options: {
+    importBasalRate: boolean;
+    nightscoutProfileName: string;
+  } = {
+    importBasalRate: true,
+    nightscoutProfileName: config.nightscout.profileName!,
+  }
+): Profile {
+  const pumpSettingsAsProfileConfig =
+    diasendPumpSettingsToNightscoutProfile(pumpSettings);
 
-  return await updateProfile({
-    ...profile,
+  const previousProfileConfig =
+    existingProfile.store[options.nightscoutProfileName] || {};
+
+  return {
+    ...existingProfile,
     store: {
-      ...profile.store,
-      [nightscoutProfileName]:
-        diasendPumpSettingsToNightscoutProfile(pumpSettings),
+      ...existingProfile.store,
+      [options.nightscoutProfileName]: {
+        ...previousProfileConfig,
+        basal: options.importBasalRate
+          ? pumpSettingsAsProfileConfig.basal
+          : previousProfileConfig.basal,
+      },
     },
-  });
+  };
 }
