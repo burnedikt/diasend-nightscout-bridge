@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import config from "./config";
 import {
   BasalRecord,
   BolusRecord,
@@ -13,6 +14,7 @@ import {
   CorrectionBolusTreatment,
   ManualGlucoseValueEntry,
   MealBolusTreatment,
+  Profile,
   ProfileConfig,
   SensorGlucoseValueEntry,
   TimeBasedValue,
@@ -245,4 +247,35 @@ export function updateBasalProfile(
     });
 
   return updatedBasalProfile;
+}
+
+export function updateNightScoutProfileWithPumpSettings(
+  existingProfile: Profile,
+  pumpSettings: PumpSettings,
+  options: {
+    importBasalRate: boolean;
+    nightscoutProfileName: string;
+  } = {
+    importBasalRate: true,
+    nightscoutProfileName: config.nightscout.profileName!,
+  }
+): Profile {
+  const pumpSettingsAsProfileConfig =
+    diasendPumpSettingsToNightscoutProfile(pumpSettings);
+
+  const previousProfileConfig =
+    existingProfile.store[options.nightscoutProfileName] || {};
+
+  return {
+    ...existingProfile,
+    store: {
+      ...existingProfile.store,
+      [options.nightscoutProfileName]: {
+        ...previousProfileConfig,
+        basal: options.importBasalRate
+          ? pumpSettingsAsProfileConfig.basal
+          : previousProfileConfig.basal,
+      },
+    },
+  };
 }

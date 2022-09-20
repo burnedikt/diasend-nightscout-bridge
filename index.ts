@@ -9,9 +9,7 @@ import {
   BolusRecord,
   getPumpSettings,
   getAuthenticatedScrapingClient,
-  PumpSettings,
   BasalRecord,
-  BaseRecord,
   PatientRecord,
   DeviceData,
 } from "./diasend";
@@ -25,16 +23,16 @@ import {
   Profile,
   fetchProfile,
   updateProfile,
-  TimeBasedValue,
   ProfileConfig,
   CarbCorrectionTreatment,
 } from "./nightscout";
 import {
   diasendRecordToNightscoutTreatment,
   diasendGlucoseRecordToNightscoutEntry,
-  diasendPumpSettingsToNightscoutProfile,
   updateBasalProfile,
+  updateNightScoutProfileWithPumpSettings,
 } from "./adapter";
+import { Looper } from "./Looper";
 
 dayjs.extend(relativeTime);
 
@@ -180,19 +178,19 @@ async function syncDiasendDataToNightscout({
   return ret.reduce<{
     entries: Entry[];
     treatments: Treatment[];
+    profiles: Profile[];
   }>(
-    (combined, { entries, treatments }) => ({
+    (combined, { entries, treatments, profile }) => ({
       entries: combined.entries.concat(entries),
       treatments: combined.treatments.concat(treatments),
+      profiles: combined.profiles.concat(profile),
     }),
-    { entries: [], treatments: [] }
+    { entries: [], treatments: [], profiles: [] }
   );
 }
 
 // CamAPSFx uploads data to diasend every 5 minutes. (Which is also the time after which new CGM values from Dexcom will be available)
 const interval = 10 * 60 * 1000;
-
-let synchronizationTimeoutId: NodeJS.Timeout | undefined | number;
 
 export function startSynchronization({
   pollingIntervalMs = interval,
@@ -202,47 +200,36 @@ export function startSynchronization({
   pollingIntervalMs?: number;
 } & SyncDiasendDataToNightScoutArgs &
   NightscoutProfileOptions = {}) {
-  let nextDateFrom: Date = dateFrom;
-  syncDiasendDataToNightscout({ dateFrom, ...syncArgs })
-    .then(({ entries, treatments }) => {
+  const looper = new Looper<
+    SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions
+  >(
+    pollingIntervalMs,
+    async (args) => {
+      const { entries, treatments } = await syncDiasendDataToNightscout({
+        ...args,
+      });
       // next run's data should be fetched where this run ended, so take a look at the records
       if (!entries?.length && !treatments?.length) {
-        return;
+        return { ...args };
       }
-      nextDateFrom = new Date(
-        entries
-          .map((e) => e.date)
-          .concat(treatments.map((t) => t.date))
-          .sort((a, b) => b - a)[0] + 1000
-      );
-    })
-    .finally(() => {
-      // if synchronizationTimeoutId is set to 0 when we get here, don't schedule a re-run. This is the exit condition
-      // and prevents the synchronization loop from continuing if the timeout is cleared while already running the sync
-      if (synchronizationTimeoutId !== 0) {
-        // schedule the next run
-        console.log(
-          `Next run will be in ${dayjs()
-            .add(pollingIntervalMs, "milliseconds")
-            .fromNow()}...`
-        );
-        synchronizationTimeoutId = setTimeout(() => {
-          void startSynchronization({
-            pollingIntervalMs,
-            ...syncArgs,
-            dateFrom: nextDateFrom,
-          });
-        }, pollingIntervalMs);
-      }
-    });
+      return {
+        ...args,
+        dateFrom: new Date(
+          entries
+            .map((e) => e.date)
+            .concat(treatments.map((t) => t.date))
+            .sort((a, b) => b - a)[0] + 1000
+        ),
+      };
+    },
+    "Entries & Treatments"
+  ).loop({ dateFrom, ...syncArgs });
 
   // return a function that can be used to end the loop
   return () => {
-    clearTimeout(synchronizationTimeoutId);
+    looper.stop();
   };
 }
-
-let pumpSettingsSynchronizationTimeoutId: NodeJS.Timeout | undefined | number;
 
 type NightscoutProfileOptions = {
   nightscoutProfileName?: string;
@@ -266,85 +253,40 @@ export function startPumpSettingsSynchronization({
   pollingIntervalMs?: number;
   importBasalRate?: boolean;
 } & NightscoutProfileOptions = {}) {
-  function pumpSynchronizationLoop() {
-    if (!diasendUsername) {
-      throw Error("Diasend Username not configured");
-    }
-    if (!diasendPassword) {
-      throw Error("Diasend Password not configured");
-    }
-
-    if (!nightscoutProfileName) {
-      console.info(
-        "Not synchronizing pump settings to nightscout profile since profile name is not defined"
-      );
-      return;
-    }
-
-    getAuthenticatedScrapingClient({
-      username: diasendUsername,
-      password: diasendPassword,
-    })
-      .then(({ client, userId }) => getPumpSettings(client, userId))
-      .then(async (pumpSettings) =>
-        updateNightScoutProfileWithPumpSettings(
-          await nightscoutProfileLoader(),
-          pumpSettings,
-          { importBasalRate, nightscoutProfileName }
-        )
-      )
-      .then(nightscoutProfileHandler)
-      .finally(() => {
-        // restart after specified time
-        // if synchronizationTimeoutId is set to 0 when we get here, don't schedule a re-run. This is the exit condition
-        // and prevents the synchronization loop from continuing if the timeout is cleared while already running the sync
-        if (pumpSettingsSynchronizationTimeoutId !== 0) {
-          console.log(
-            `Next run to synchronize pump settings will be in ${dayjs()
-              .add(pollingIntervalMs, "milliseconds")
-              .fromNow()}...`
-          );
-
-          setTimeout(pumpSynchronizationLoop, pollingIntervalMs);
-        }
-      });
+  if (!diasendUsername) {
+    throw Error("Diasend Username not configured");
+  }
+  if (!diasendPassword) {
+    throw Error("Diasend Password not configured");
   }
 
-  void pumpSynchronizationLoop();
+  if (!nightscoutProfileName) {
+    console.info(
+      "Not synchronizing pump settings to nightscout profile since profile name is not defined"
+    );
+    return;
+  }
+
+  const looper = new Looper(
+    pollingIntervalMs,
+    async () => {
+      const { client, userId } = await getAuthenticatedScrapingClient({
+        username: diasendUsername,
+        password: diasendPassword,
+      });
+      const pumpSettings = await getPumpSettings(client, userId);
+      const updatedNightscoutProfile = updateNightScoutProfileWithPumpSettings(
+        await nightscoutProfileLoader(),
+        pumpSettings,
+        { importBasalRate, nightscoutProfileName }
+      );
+      await nightscoutProfileHandler(updatedNightscoutProfile);
+    },
+    "Pump Settings"
+  ).loop();
 
   // return a function that can be used to end the loop
   return () => {
-    clearTimeout(pumpSettingsSynchronizationTimeoutId);
-  };
-}
-
-function updateNightScoutProfileWithPumpSettings(
-  existingProfile: Profile,
-  pumpSettings: PumpSettings,
-  options: {
-    importBasalRate: boolean;
-    nightscoutProfileName: string;
-  } = {
-    importBasalRate: true,
-    nightscoutProfileName: config.nightscout.profileName!,
-  }
-): Profile {
-  const pumpSettingsAsProfileConfig =
-    diasendPumpSettingsToNightscoutProfile(pumpSettings);
-
-  const previousProfileConfig =
-    existingProfile.store[options.nightscoutProfileName] || {};
-
-  return {
-    ...existingProfile,
-    store: {
-      ...existingProfile.store,
-      [options.nightscoutProfileName]: {
-        ...previousProfileConfig,
-        basal: options.importBasalRate
-          ? pumpSettingsAsProfileConfig.basal
-          : previousProfileConfig.basal,
-      },
-    },
+    looper.stop();
   };
 }

@@ -14,7 +14,7 @@
     "build": "tsc",
     "prepare": "npm run build",
     "run": "yarn build && node dist/run.js",
-    "test": "cross-env TZ=Europe/Berlin jest"
+    "test": "cross-env TZ=Europe/Berlin jest --silent"
   },
   "engines": {
     "node": ">=14"
