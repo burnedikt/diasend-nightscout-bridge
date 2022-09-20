@@ -120,7 +120,7 @@ async function syncDiasendDataToNightscout({
   const ret = await Promise.all(
     records.map(async ({ data: records, device }) => {
       // extract all CGM values first
-      const nightscoutEntries = records
+      const nightscoutEntries: Entry[] = records
         // TODO: support non-glucose type values
         // TODO: treat calibration events differently?
         .filter<GlucoseRecord>(
@@ -170,7 +170,18 @@ async function syncDiasendDataToNightscout({
         nightscoutTreatmentsHandler(nightscoutTreatments),
         nightscoutProfileHandler(updatedProfile),
       ]);
-      return { entries: entries ?? [], treatments: treatments ?? [], profile };
+      return {
+        entries: entries ?? [],
+        treatments: treatments ?? [],
+        profile,
+        latestRecordDate: dayjs(
+          records
+            // sort records by date (descending)
+            .sort((r1, r2) =>
+              dayjs(r2.created_at).diff(dayjs(r1.created_at))
+            )[0].created_at
+        ).toDate(),
+      };
     })
   );
 
@@ -178,14 +189,19 @@ async function syncDiasendDataToNightscout({
   return ret.reduce<{
     entries: Entry[];
     treatments: Treatment[];
-    profiles: Profile[];
+    profile?: Profile;
+    latestRecordDate: Date;
   }>(
-    (combined, { entries, treatments, profile }) => ({
+    (combined, { entries, treatments, profile, latestRecordDate }) => ({
       entries: combined.entries.concat(entries),
       treatments: combined.treatments.concat(treatments),
-      profiles: combined.profiles.concat(profile),
+      profile: profile,
+      latestRecordDate:
+        combined.latestRecordDate < latestRecordDate
+          ? latestRecordDate
+          : combined.latestRecordDate,
     }),
-    { entries: [], treatments: [], profiles: [] }
+    { entries: [], treatments: [], latestRecordDate: new Date() }
   );
 }
 
@@ -205,21 +221,13 @@ export function startSynchronization({
   >(
     pollingIntervalMs,
     async (args) => {
-      const { entries, treatments } = await syncDiasendDataToNightscout({
+      const { latestRecordDate } = await syncDiasendDataToNightscout({
         ...args,
       });
       // next run's data should be fetched where this run ended, so take a look at the records
-      if (!entries?.length && !treatments?.length) {
-        return { ...args };
-      }
       return {
         ...args,
-        dateFrom: new Date(
-          entries
-            .map((e) => e.date)
-            .concat(treatments.map((t) => t.date))
-            .sort((a, b) => b - a)[0] + 1000
-        ),
+        dateFrom: dayjs(latestRecordDate).add(1, "second").toDate(),
       };
     },
     "Entries & Treatments"
