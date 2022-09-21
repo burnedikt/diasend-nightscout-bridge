@@ -175,11 +175,13 @@ async function syncDiasendDataToNightscout({
         treatments: treatments ?? [],
         profile,
         latestRecordDate: dayjs(
-          records
-            // sort records by date (descending)
-            .sort((r1, r2) =>
-              dayjs(r2.created_at).diff(dayjs(r1.created_at))
-            )[0].created_at
+          (
+            records
+              // sort records by date (descending)
+              .sort((r1, r2) =>
+                dayjs(r2.created_at).diff(dayjs(r1.created_at))
+              )[0] ?? { created_at: new Date() }
+          ).created_at
         ).toDate(),
       };
     })
