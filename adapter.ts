@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import config from "./config";
 import {
   BasalRecord,
   BolusRecord,
@@ -13,6 +14,7 @@ import {
   CorrectionBolusTreatment,
   ManualGlucoseValueEntry,
   MealBolusTreatment,
+  Profile,
   ProfileConfig,
   SensorGlucoseValueEntry,
   TimeBasedValue,
@@ -130,10 +132,7 @@ export function diasendRecordToNightscoutTreatment(
 
     const notesParts = [];
     if (!carbRecord) {
-      // FIXME: schedule another run if carb event not yet found
-      // for now, we just return the meal record without carbs and leave a note
-      console.warn("Could not find corresponding carb value for bolus");
-      notesParts.push(`Carbs unknown!`);
+      throw new Error("Could not find matching carb record. Please retry.");
     }
 
     if (bolusRecord.programmed_bg_correction) {
@@ -245,4 +244,35 @@ export function updateBasalProfile(
     });
 
   return updatedBasalProfile;
+}
+
+export function updateNightScoutProfileWithPumpSettings(
+  existingProfile: Profile,
+  pumpSettings: PumpSettings,
+  options: {
+    importBasalRate: boolean;
+    nightscoutProfileName: string;
+  } = {
+    importBasalRate: true,
+    nightscoutProfileName: config.nightscout.profileName!,
+  }
+): Profile {
+  const pumpSettingsAsProfileConfig =
+    diasendPumpSettingsToNightscoutProfile(pumpSettings);
+
+  const previousProfileConfig =
+    existingProfile.store[options.nightscoutProfileName] || {};
+
+  return {
+    ...existingProfile,
+    store: {
+      ...existingProfile.store,
+      [options.nightscoutProfileName]: {
+        ...previousProfileConfig,
+        basal: options.importBasalRate
+          ? pumpSettingsAsProfileConfig.basal
+          : previousProfileConfig.basal,
+      },
+    },
+  };
 }
