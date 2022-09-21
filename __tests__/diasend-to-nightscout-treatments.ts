@@ -146,22 +146,11 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     const device = testDevice;
 
     // when converting the reading to a nightscout entry
-    const nightscoutTreatment = diasendRecordToNightscoutTreatment(
-      bolusRecord,
-      [bolusRecord],
-      device
-    );
-
-    // then expect to still have a bolus and note that the carbs are missing
-    expect(nightscoutTreatment).toStrictEqual<MealBolusTreatment>({
-      date: 1661419735000,
-      carbs: undefined,
-      eventType: "Meal Bolus",
-      insulin: 0.3,
-      device: "Test Pump (1111-22123)",
-      app: "diasend",
-      notes: "Carbs unknown!, Correction: -0.1",
-    });
+    expect(() =>
+      diasendRecordToNightscoutTreatment(bolusRecord, [bolusRecord], device)
+    )
+      // then expect to get an exception
+      .toThrowError("Could not find matching carb record");
   });
 
   test("correction bolus", () => {
@@ -296,7 +285,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     ];
 
     // When passing through the converter
-    const treatments = identifyTreatments(records, testDevice);
+    const { treatments } = identifyTreatments(records, testDevice);
 
     // Then expect to obtain a hypo treatment and a meal bolus
     expect(treatments).toHaveLength(2);
@@ -305,5 +294,48 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     expect(treatments[1].eventType).toBe("Meal Bolus");
     expect((treatments[1] as MealBolusTreatment).carbs).toBe(11);
     expect((treatments[1] as MealBolusTreatment).insulin).toBe(0.5);
+  });
+
+  test("throws an error if no matching carb record for bolus", () => {
+    // Given a bunch of records that contain a bolus for a programmed meal but miss the corresponding carbs
+    const records: PatientRecord[] = [
+      {
+        type: "glucose",
+        created_at: "2022-09-18T13:54:29",
+        value: 56,
+        unit: "mg/dl",
+        flags: [
+          {
+            flag: 123,
+            description: "Continous reading",
+          },
+        ],
+      },
+      {
+        type: "insulin_bolus",
+        created_at: "2022-09-18T14:08:38",
+        unit: "U",
+        total_value: 0.5,
+        spike_value: 0.5,
+        suggested: 0.5,
+        suggestion_overridden: "no",
+        suggestion_based_on_bg: "no",
+        suggestion_based_on_carb: "yes",
+        programmed_meal: 0.5,
+        flags: [
+          {
+            flag: 1035,
+            description: "Bolus type ezcarb",
+          },
+        ],
+      },
+    ];
+
+    // When attempting to identify the treatments
+    const { unprocessedRecords } = identifyTreatments(records, testDevice);
+
+    // Then expect the bolus record to stay unprocessed
+    expect(unprocessedRecords).toHaveLength(1);
+    expect((unprocessedRecords[0] as BolusRecord).programmed_meal).toBe(0.5);
   });
 });

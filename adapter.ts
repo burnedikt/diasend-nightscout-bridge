@@ -132,10 +132,7 @@ export function diasendRecordToNightscoutTreatment(
 
     const notesParts = [];
     if (!carbRecord) {
-      // FIXME: schedule another run if carb event not yet found
-      // for now, we just return the meal record without carbs and leave a note
-      console.warn("Could not find corresponding carb value for bolus");
-      notesParts.push(`Carbs unknown!`);
+      throw new Error("Could not find matching carb record. Please retry.");
     }
 
     if (bolusRecord.programmed_bg_correction) {

@@ -48,13 +48,15 @@ interface SyncDiasendDataToNightScoutArgs {
   ) => Promise<Treatment[]>;
   dateFrom?: Date;
   dateTo?: Date;
+  previousRecords?: { [deviceSerial: string]: PatientRecord[] };
 }
 
 export function identifyTreatments(
   records: PatientRecord[],
   device: DeviceData
 ) {
-  return records
+  const unprocessedRecords: (CarbRecord | BolusRecord)[] = [];
+  const treatments = records
     .filter<CarbRecord | BolusRecord>(
       (record): record is CarbRecord | BolusRecord =>
         ["insulin_bolus", "carb"].includes(record.type)
@@ -66,18 +68,25 @@ export function identifyTreatments(
         | CarbCorrectionTreatment
       )[]
     >((treatments, record, _index, allRecords) => {
-      const treatment = diasendRecordToNightscoutTreatment(
-        record,
-        allRecords,
-        device
-      );
+      try {
+        const treatment = diasendRecordToNightscoutTreatment(
+          record,
+          allRecords,
+          device
+        );
 
-      if (treatment) {
-        treatments.push(treatment);
+        if (treatment) {
+          treatments.push(treatment);
+        }
+      } catch (e) {
+        // if an error happened, this means, we'll need to remember the record and try to resolve it in the next run
+        unprocessedRecords.push(record);
       }
 
       return treatments;
     }, []);
+
+  return { treatments, unprocessedRecords };
 }
 
 async function syncDiasendDataToNightscout({
@@ -93,6 +102,7 @@ async function syncDiasendDataToNightscout({
   nightscoutProfileLoader = () => fetchProfile(),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
+  previousRecords = {},
 }: SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions) {
   if (!diasendUsername) {
     throw Error("Diasend Username not configured");
@@ -111,14 +121,19 @@ async function syncDiasendDataToNightscout({
   // using the diasend token, now fetch the patient records per device
   const records = await getPatientData(diasendAccessToken, dateFrom, dateTo);
   console.log(
-    "Number of diasend records since",
-    dayjs(dateFrom).fromNow(),
+    `Number of diasend records since ${dayjs(dateFrom).from(
+      dateTo
+    )} (${dateFrom.toISOString()} - ${dateTo.toISOString()}): `,
     records.reduce<number>((count, { data }) => count + data.length, 0)
   );
 
   // loop over all devices
   const ret = await Promise.all(
     records.map(async ({ data: records, device }) => {
+      // include any unprocessed records from previous runs
+      if (device.serial in previousRecords) {
+        records.unshift(...previousRecords[device.serial]);
+      }
       // extract all CGM values first
       const nightscoutEntries: Entry[] = records
         // TODO: support non-glucose type values
@@ -131,10 +146,10 @@ async function syncDiasendDataToNightscout({
         );
 
       // handle insulin boli and carbs
-      const nightscoutTreatments: Treatment[] = identifyTreatments(
-        records,
-        device
-      );
+      const { treatments: nightscoutTreatments, unprocessedRecords } =
+        identifyTreatments(records, device);
+
+      // remember any unprocessed records for the next run
 
       // handle basal rates
       const existingProfile = await nightscoutProfileLoader();
@@ -164,6 +179,9 @@ async function syncDiasendDataToNightscout({
       console.log(
         `Sending ${nightscoutTreatments.length} treatments to nightscout`
       );
+      console.log(
+        `Updating basal profile based on ${basalRecords.length} records`
+      );
       // send them to nightscout
       const [entries, treatments, profile] = await Promise.all([
         nightscoutEntriesHandler(nightscoutEntries),
@@ -180,9 +198,11 @@ async function syncDiasendDataToNightscout({
               // sort records by date (descending)
               .sort((r1, r2) =>
                 dayjs(r2.created_at).diff(dayjs(r1.created_at))
-              )[0] ?? { created_at: new Date() }
+              )[0] ?? { created_at: dateTo }
           ).created_at
         ).toDate(),
+        unprocessedRecords,
+        device,
       };
     })
   );
@@ -193,8 +213,19 @@ async function syncDiasendDataToNightscout({
     treatments: Treatment[];
     profile?: Profile;
     latestRecordDate: Date;
+    unprocessedRecords: { [deviceSerial: string]: PatientRecord[] };
   }>(
-    (combined, { entries, treatments, profile, latestRecordDate }) => ({
+    (
+      combined,
+      {
+        entries,
+        treatments,
+        profile,
+        latestRecordDate,
+        unprocessedRecords,
+        device,
+      }
+    ) => ({
       entries: combined.entries.concat(entries),
       treatments: combined.treatments.concat(treatments),
       profile: profile,
@@ -202,8 +233,17 @@ async function syncDiasendDataToNightscout({
         combined.latestRecordDate < latestRecordDate
           ? latestRecordDate
           : combined.latestRecordDate,
+      unprocessedRecords: {
+        ...combined.unprocessedRecords,
+        [device.serial]: unprocessedRecords,
+      },
     }),
-    { entries: [], treatments: [], latestRecordDate: new Date() }
+    {
+      entries: [],
+      treatments: [],
+      latestRecordDate: new Date(0),
+      unprocessedRecords: {},
+    }
   );
 }
 
@@ -222,14 +262,24 @@ export function startSynchronization({
     SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions
   >(
     pollingIntervalMs,
-    async (args) => {
-      const { latestRecordDate } = await syncDiasendDataToNightscout({
-        ...args,
-      });
+    async ({ dateTo, ...args } = {}) => {
+      const { latestRecordDate, unprocessedRecords } =
+        await syncDiasendDataToNightscout({
+          dateTo,
+          ...args,
+        });
       // next run's data should be fetched where this run ended, so take a look at the records
+      console.log(
+        `Scheduling ${Object.values(unprocessedRecords).reduce(
+          (sum, records) => sum + records.length,
+          0
+        )} records for processing in next run`
+      );
+      // remove the dateTo option
       return {
         ...args,
         dateFrom: dayjs(latestRecordDate).add(1, "second").toDate(),
+        previousRecords: unprocessedRecords,
       };
     },
     "Entries & Treatments"

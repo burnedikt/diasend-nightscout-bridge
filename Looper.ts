@@ -41,7 +41,8 @@ export class Looper<TLoopArgs = void> {
         console.log(
           `Next run (${this.name}) will be in ${dayjs()
             .add(this.intervalMs, "milliseconds")
-            .fromNow()}...`
+            .fromNow()} with args:`,
+          nextArgs
         );
         this.timeoutHandle = setTimeout(
           this.loop.bind(this, nextArgs),
