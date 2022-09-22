@@ -192,15 +192,16 @@ async function syncDiasendDataToNightscout({
         entries: entries ?? [],
         treatments: treatments ?? [],
         profile,
-        latestRecordDate: dayjs(
-          (
-            records
-              // sort records by date (descending)
-              .sort((r1, r2) =>
-                dayjs(r2.created_at).diff(dayjs(r1.created_at))
-              )[0] ?? { created_at: dateTo }
-          ).created_at
-        ).toDate(),
+        latestRecordDate:
+          records.length > 0
+            ? new Date(
+                records
+                  // sort records by date (descending)
+                  .sort((r1, r2) =>
+                    dayjs(r2.created_at).diff(dayjs(r1.created_at))
+                  )[0].created_at
+              )
+            : dateFrom,
         unprocessedRecords,
         device,
       };
@@ -230,7 +231,7 @@ async function syncDiasendDataToNightscout({
       treatments: combined.treatments.concat(treatments),
       profile: profile,
       latestRecordDate:
-        combined.latestRecordDate < latestRecordDate
+        latestRecordDate > combined.latestRecordDate
           ? latestRecordDate
           : combined.latestRecordDate,
       unprocessedRecords: {
@@ -241,7 +242,7 @@ async function syncDiasendDataToNightscout({
     {
       entries: [],
       treatments: [],
-      latestRecordDate: new Date(0),
+      latestRecordDate: dateFrom,
       unprocessedRecords: {},
     }
   );
