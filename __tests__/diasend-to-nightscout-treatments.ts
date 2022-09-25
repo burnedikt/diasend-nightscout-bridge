@@ -1,6 +1,12 @@
 import { identifyTreatments } from "../index";
 import { diasendRecordToNightscoutTreatment } from "../adapter";
-import { BolusRecord, CarbRecord, DeviceData, PatientRecord } from "../diasend";
+import {
+  BolusRecord,
+  CarbRecord,
+  DeviceData,
+  PatientRecord,
+  PatientRecordWithDeviceData,
+} from "../diasend";
 import {
   CarbCorrectionTreatment,
   CorrectionBolusTreatment,
@@ -16,7 +22,7 @@ const testDevice: DeviceData = {
 describe("testing conversion of diasend patient data to nightscout treatments", () => {
   test("meal bolus + carbs", () => {
     // given a meal bolus and matching carb record
-    const mealBolusRecord: BolusRecord = {
+    const mealBolusRecord: PatientRecordWithDeviceData<BolusRecord> = {
       type: "insulin_bolus",
       created_at: "2022-08-26T18:20:27",
       unit: "U",
@@ -33,22 +39,21 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
           description: "Bolus type ezcarb",
         },
       ],
+      device: testDevice,
     };
-    const carbRecord: CarbRecord = {
+    const carbRecord: PatientRecordWithDeviceData<CarbRecord> = {
       type: "carb",
       created_at: "2022-08-26T18:21:05",
       value: "18",
       unit: "g",
       flags: [],
+      device: testDevice,
     };
-    // and some device data
-    const device = testDevice;
 
     // when converting the reading to a nightscout entry
     const nightscoutTreatment = diasendRecordToNightscoutTreatment(
       mealBolusRecord,
-      [mealBolusRecord, carbRecord],
-      device
+      [mealBolusRecord, carbRecord]
     );
 
     // then expect it to look like this
@@ -65,7 +70,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
 
   test("meal bolus with correction", () => {
     // given a correction bolus with a meal bolus and matching carbs
-    const bolusRecord: BolusRecord = {
+    const bolusRecord: PatientRecordWithDeviceData<BolusRecord> = {
       type: "insulin_bolus",
       created_at: "2022-08-25T11:28:55",
       unit: "U",
@@ -87,22 +92,21 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
           description: "Bolus type ezcarb",
         },
       ],
+      device: testDevice,
     };
-    const carbRecord: CarbRecord = {
+    const carbRecord: PatientRecordWithDeviceData<CarbRecord> = {
       type: "carb",
       created_at: "2022-08-25T11:29:31",
       value: "11",
       unit: "g",
       flags: [],
+      device: testDevice,
     };
-    // and some device data
-    const device = testDevice;
 
     // when converting the reading to a nightscout entry
     const nightscoutTreatment = diasendRecordToNightscoutTreatment(
       bolusRecord,
-      [bolusRecord, carbRecord],
-      device
+      [bolusRecord, carbRecord]
     );
 
     // then expect it to look like this
@@ -119,7 +123,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
 
   test("meal bolus without maching carbs", () => {
     // given a meal bolus without matching carbs
-    const bolusRecord: BolusRecord = {
+    const bolusRecord: PatientRecordWithDeviceData<BolusRecord> = {
       type: "insulin_bolus",
       created_at: "2022-08-25T11:28:55",
       unit: "U",
@@ -141,21 +145,18 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
           description: "Bolus type ezcarb",
         },
       ],
+      device: testDevice,
     };
-    // and some device data
-    const device = testDevice;
 
     // when converting the reading to a nightscout entry
-    expect(() =>
-      diasendRecordToNightscoutTreatment(bolusRecord, [bolusRecord], device)
-    )
+    expect(() => diasendRecordToNightscoutTreatment(bolusRecord, [bolusRecord]))
       // then expect to get an exception
       .toThrowError("Could not find matching carb record");
   });
 
   test("correction bolus", () => {
     // given a correction-only bolus
-    const bolusRecord: BolusRecord = {
+    const bolusRecord: PatientRecordWithDeviceData<BolusRecord> = {
       type: "insulin_bolus",
       created_at: "2022-08-25T15:42:11",
       unit: "U",
@@ -172,15 +173,13 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
           description: "Bolus type ezbg",
         },
       ],
+      device: testDevice,
     };
-    // and some device data
-    const device = testDevice;
 
     // when converting the reading to a nightscout entry
     const nightscoutTreatment = diasendRecordToNightscoutTreatment(
       bolusRecord,
-      [bolusRecord],
-      device
+      [bolusRecord]
     );
 
     // then expect it to look like this
@@ -195,22 +194,19 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
 
   test("convert hypoglycaemia treatment", () => {
     // given a hypoglycaemia treatment (which is essentially: Just carbs without any bolus)
-    const records: CarbRecord[] = [
+    const records: PatientRecordWithDeviceData<CarbRecord>[] = [
       {
         type: "carb",
         created_at: "2022-09-18T13:50:40",
         value: "5",
         unit: "g",
         flags: [],
+        device: testDevice,
       },
     ];
 
     // When passing through the converter
-    const treatment = diasendRecordToNightscoutTreatment(
-      records[0],
-      records,
-      testDevice
-    );
+    const treatment = diasendRecordToNightscoutTreatment(records[0], records);
 
     // Then expect to obtain a hypo treatment
     expect(treatment).toStrictEqual<CarbCorrectionTreatment>({
@@ -224,7 +220,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
 
   test("detect hypoglycaemia treatment with confusing meal bolus", () => {
     // given a hypoglycaemia treatment (which is essentially: Just carbs without any bolus)
-    const records: PatientRecord[] = [
+    const records: PatientRecordWithDeviceData<PatientRecord>[] = [
       {
         type: "glucose",
         created_at: "2022-09-18T13:49:30",
@@ -236,6 +232,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
             description: "Continous reading",
           },
         ],
+        device: testDevice,
       },
       {
         type: "carb",
@@ -243,6 +240,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
         value: "7",
         unit: "g",
         flags: [],
+        device: testDevice,
       },
       {
         type: "glucose",
@@ -255,6 +253,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
             description: "Continous reading",
           },
         ],
+        device: testDevice,
       },
       // want to have a bolus here as well to ensure it's not mixed up with the hypo
       {
@@ -274,6 +273,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
             description: "Bolus type ezcarb",
           },
         ],
+        device: testDevice,
       },
       {
         type: "carb",
@@ -281,11 +281,12 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
         value: "11",
         unit: "g",
         flags: [],
+        device: testDevice,
       },
     ];
 
     // When passing through the converter
-    const { treatments } = identifyTreatments(records, testDevice);
+    const { treatments } = identifyTreatments(records);
 
     // Then expect to obtain a hypo treatment and a meal bolus
     expect(treatments).toHaveLength(2);
@@ -298,7 +299,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
 
   test("throws an error if no matching carb record for bolus", () => {
     // Given a bunch of records that contain a bolus for a programmed meal but miss the corresponding carbs
-    const records: PatientRecord[] = [
+    const records: PatientRecordWithDeviceData<PatientRecord>[] = [
       {
         type: "glucose",
         created_at: "2022-09-18T13:54:29",
@@ -310,6 +311,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
             description: "Continous reading",
           },
         ],
+        device: testDevice,
       },
       {
         type: "insulin_bolus",
@@ -328,11 +330,12 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
             description: "Bolus type ezcarb",
           },
         ],
+        device: testDevice,
       },
     ];
 
     // When attempting to identify the treatments
-    const { unprocessedRecords } = identifyTreatments(records, testDevice);
+    const { unprocessedRecords } = identifyTreatments(records);
 
     // Then expect the bolus record to stay unprocessed
     expect(unprocessedRecords).toHaveLength(1);

@@ -11,7 +11,7 @@ import {
   getAuthenticatedScrapingClient,
   BasalRecord,
   PatientRecord,
-  DeviceData,
+  PatientRecordWithDeviceData,
 } from "./diasend";
 import {
   reportEntriesToNightscout,
@@ -36,29 +36,44 @@ import { Looper } from "./Looper";
 
 dayjs.extend(relativeTime);
 
-interface SyncDiasendDataToNightScoutArgs {
+interface BaseSyncDiasendArgs {
   diasendUsername?: string;
   diasendPassword?: string;
   diasendClientId?: string;
   diasendClientSecret?: string;
-  nightscoutProfileName?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+interface SyncDiasendGlucoseToNightscoutArgs extends BaseSyncDiasendArgs {
   nightscoutEntriesHandler?: (entries: Entry[]) => Promise<Entry[]>;
+}
+
+interface SyncDiasendDataToNightScoutArgs extends BaseSyncDiasendArgs {
+  nightscoutProfileName?: string;
   nightscoutTreatmentsHandler?: (
     treatments: Treatment[]
   ) => Promise<Treatment[]>;
-  dateFrom?: Date;
-  dateTo?: Date;
-  previousRecords?: { [deviceSerial: string]: PatientRecord[] };
+  previousRecords?: PatientRecordWithDeviceData<PatientRecord>[];
 }
 
+type NightscoutProfileOptions = {
+  nightscoutProfileName?: string;
+  nightscoutProfileLoader?: () => Promise<Profile>;
+  nightscoutProfileHandler?: (profile: Profile) => Promise<Profile>;
+};
+
 export function identifyTreatments(
-  records: PatientRecord[],
-  device: DeviceData
+  records: PatientRecordWithDeviceData<PatientRecord>[]
 ) {
-  const unprocessedRecords: (CarbRecord | BolusRecord)[] = [];
+  const unprocessedRecords: PatientRecordWithDeviceData<
+    CarbRecord | BolusRecord
+  >[] = [];
   const treatments = records
-    .filter<CarbRecord | BolusRecord>(
-      (record): record is CarbRecord | BolusRecord =>
+    .filter<PatientRecordWithDeviceData<CarbRecord | BolusRecord>>(
+      (
+        record
+      ): record is PatientRecordWithDeviceData<CarbRecord | BolusRecord> =>
         ["insulin_bolus", "carb"].includes(record.type)
     )
     .reduce<
@@ -71,8 +86,7 @@ export function identifyTreatments(
       try {
         const treatment = diasendRecordToNightscoutTreatment(
           record,
-          allRecords,
-          device
+          allRecords
         );
 
         if (treatment) {
@@ -89,12 +103,61 @@ export function identifyTreatments(
   return { treatments, unprocessedRecords };
 }
 
-async function syncDiasendDataToNightscout({
+async function syncDiasendGlucoseToNightscout({
   diasendUsername = config.diasend.username,
   diasendPassword = config.diasend.password,
   diasendClientId = config.diasend.clientId,
   diasendClientSecret = config.diasend.clientSecret,
   nightscoutEntriesHandler = (entries) => reportEntriesToNightscout(entries),
+  dateFrom = dayjs().subtract(10, "minutes").toDate(),
+  dateTo = new Date(),
+}: SyncDiasendGlucoseToNightscoutArgs) {
+  const records = await getDiasendPatientData({
+    diasendUsername,
+    diasendPassword,
+    diasendClientId,
+    diasendClientSecret,
+    dateFrom,
+    dateTo,
+  });
+
+  // we only care about glucose values, ignore everything else
+  const nightscoutEntries: Entry[] = records
+    // TODO: support non-glucose type values
+    // TODO: treat calibration events differently?
+    .filter<PatientRecordWithDeviceData<GlucoseRecord>>(
+      (record): record is PatientRecordWithDeviceData<GlucoseRecord> =>
+        record.type === "glucose"
+    )
+    .map<Entry>((record) => diasendGlucoseRecordToNightscoutEntry(record));
+
+  console.log(
+    `Number of glucose records since ${dayjs(dateFrom).from(
+      dateTo
+    )} (${dateFrom.toISOString()} - ${dateTo.toISOString()}): `,
+    nightscoutEntries.length
+  );
+
+  // send them to nightscout
+  console.log(`Sending ${nightscoutEntries.length} entries to nightscout`);
+  const entries = await nightscoutEntriesHandler(nightscoutEntries);
+  return {
+    entries,
+    latestRecordDate:
+      entries.length > 0
+        ? new Date(
+            // get latest record's date
+            entries.sort((a, b) => dayjs(b.date).diff(dayjs(a.date)))[0].date
+          )
+        : null,
+  };
+}
+
+async function syncDiasendDataToNightscout({
+  diasendUsername = config.diasend.username,
+  diasendPassword = config.diasend.password,
+  diasendClientId = config.diasend.clientId,
+  diasendClientSecret = config.diasend.clientSecret,
   nightscoutTreatmentsHandler = (treatments) =>
     reportTreatmentsToNightscout(treatments),
   nightscoutProfileName = config.nightscout.profileName!,
@@ -102,8 +165,92 @@ async function syncDiasendDataToNightscout({
   nightscoutProfileLoader = () => fetchProfile(),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
-  previousRecords = {},
+  previousRecords = [],
 }: SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions) {
+  const records = await getDiasendPatientData({
+    diasendUsername,
+    diasendPassword,
+    diasendClientId,
+    diasendClientSecret,
+    dateFrom,
+    dateTo,
+  });
+
+  // include any unprocessed records from previous runs
+  records.unshift(...previousRecords);
+
+  // handle insulin boli and carbs
+  const { treatments: nightscoutTreatments, unprocessedRecords } =
+    identifyTreatments(records);
+
+  // handle basal rates
+  const existingProfile = await nightscoutProfileLoader();
+  const existingProfileConfig: ProfileConfig =
+    nightscoutProfileName in existingProfile.store
+      ? existingProfile.store[nightscoutProfileName]
+      : existingProfile.store[existingProfile.defaultProfile];
+  const basalRecords = records.filter<PatientRecordWithDeviceData<BasalRecord>>(
+    (record): record is PatientRecordWithDeviceData<BasalRecord> =>
+      record.type === "insulin_basal"
+  );
+  const updatedBasalProfile = updateBasalProfile(
+    existingProfileConfig.basal || [],
+    basalRecords
+  );
+  const updatedProfile: Profile = {
+    ...existingProfile,
+    store: {
+      ...existingProfile.store,
+      [nightscoutProfileName]: {
+        ...existingProfileConfig,
+        basal: updatedBasalProfile,
+      },
+    },
+  };
+
+  console.log(
+    `Sending ${nightscoutTreatments.length} treatments to nightscout`
+  );
+  console.log(`Updating basal profile based on ${basalRecords.length} records`);
+  // send them to nightscout
+  const [treatments, profile] = await Promise.all([
+    nightscoutTreatmentsHandler(nightscoutTreatments),
+    nightscoutProfileHandler(updatedProfile),
+  ]);
+
+  return {
+    treatments: treatments ?? [],
+    profile,
+    latestRecordDate:
+      treatments.length > 0
+        ? new Date(
+            treatments
+              // sort records by date (descending)
+              .sort((r1, r2) => dayjs(r2.date).diff(dayjs(r1.date)))[0].date
+          )
+        : null,
+    unprocessedRecords,
+  };
+}
+
+// CamAPSFx uploads data to diasend every 5 minutes. (Which is also the time after which new CGM values from Dexcom will be available)
+const interval = 5 * 60 * 1000;
+
+async function getDiasendPatientData({
+  diasendUsername,
+  diasendPassword,
+  diasendClientId,
+  diasendClientSecret,
+  dateFrom,
+  dateTo,
+}: {
+  diasendUsername: string | undefined;
+  diasendPassword: string | undefined;
+  diasendClientId: string;
+  diasendClientSecret: string;
+  dateFrom: Date;
+  dateTo: Date;
+}) {
   if (!diasendUsername) {
     throw Error("Diasend Username not configured");
   }
@@ -120,136 +267,10 @@ async function syncDiasendDataToNightscout({
 
   // using the diasend token, now fetch the patient records per device
   const records = await getPatientData(diasendAccessToken, dateFrom, dateTo);
-  console.log(
-    `Number of diasend records since ${dayjs(dateFrom).from(
-      dateTo
-    )} (${dateFrom.toISOString()} - ${dateTo.toISOString()}): `,
-    records.reduce<number>((count, { data }) => count + data.length, 0)
-  );
-
-  // loop over all devices
-  const ret = await Promise.all(
-    records.map(async ({ data: records, device }) => {
-      // include any unprocessed records from previous runs
-      if (device.serial in previousRecords) {
-        records.unshift(...previousRecords[device.serial]);
-      }
-      // extract all CGM values first
-      const nightscoutEntries: Entry[] = records
-        // TODO: support non-glucose type values
-        // TODO: treat calibration events differently?
-        .filter<GlucoseRecord>(
-          (record): record is GlucoseRecord => record.type === "glucose"
-        )
-        .map<Entry>((record) =>
-          diasendGlucoseRecordToNightscoutEntry(record, device)
-        );
-
-      // handle insulin boli and carbs
-      const { treatments: nightscoutTreatments, unprocessedRecords } =
-        identifyTreatments(records, device);
-
-      // remember any unprocessed records for the next run
-
-      // handle basal rates
-      const existingProfile = await nightscoutProfileLoader();
-      const existingProfileConfig: ProfileConfig =
-        nightscoutProfileName in existingProfile.store
-          ? existingProfile.store[nightscoutProfileName]
-          : existingProfile.store[existingProfile.defaultProfile];
-      const basalRecords = records.filter<BasalRecord>(
-        (record): record is BasalRecord => record.type === "insulin_basal"
-      );
-      const updatedBasalProfile = updateBasalProfile(
-        existingProfileConfig.basal || [],
-        basalRecords
-      );
-      const updatedProfile: Profile = {
-        ...existingProfile,
-        store: {
-          ...existingProfile.store,
-          [nightscoutProfileName]: {
-            ...existingProfileConfig,
-            basal: updatedBasalProfile,
-          },
-        },
-      };
-
-      console.log(`Sending ${nightscoutEntries.length} entries to nightscout`);
-      console.log(
-        `Sending ${nightscoutTreatments.length} treatments to nightscout`
-      );
-      console.log(
-        `Updating basal profile based on ${basalRecords.length} records`
-      );
-      // send them to nightscout
-      const [entries, treatments, profile] = await Promise.all([
-        nightscoutEntriesHandler(nightscoutEntries),
-        nightscoutTreatmentsHandler(nightscoutTreatments),
-        nightscoutProfileHandler(updatedProfile),
-      ]);
-      return {
-        entries: entries ?? [],
-        treatments: treatments ?? [],
-        profile,
-        latestRecordDate:
-          records.length > 0
-            ? new Date(
-                records
-                  // sort records by date (descending)
-                  .sort((r1, r2) =>
-                    dayjs(r2.created_at).diff(dayjs(r1.created_at))
-                  )[0].created_at
-              )
-            : dateFrom,
-        unprocessedRecords,
-        device,
-      };
-    })
-  );
-
-  // transform return value to be just one object containing all entries and treatments, device independent
-  return ret.reduce<{
-    entries: Entry[];
-    treatments: Treatment[];
-    profile?: Profile;
-    latestRecordDate: Date;
-    unprocessedRecords: { [deviceSerial: string]: PatientRecord[] };
-  }>(
-    (
-      combined,
-      {
-        entries,
-        treatments,
-        profile,
-        latestRecordDate,
-        unprocessedRecords,
-        device,
-      }
-    ) => ({
-      entries: combined.entries.concat(entries),
-      treatments: combined.treatments.concat(treatments),
-      profile: profile,
-      latestRecordDate:
-        latestRecordDate > combined.latestRecordDate
-          ? latestRecordDate
-          : combined.latestRecordDate,
-      unprocessedRecords: {
-        ...combined.unprocessedRecords,
-        [device.serial]: unprocessedRecords,
-      },
-    }),
-    {
-      entries: [],
-      treatments: [],
-      latestRecordDate: dateFrom,
-      unprocessedRecords: {},
-    }
+  return records.flatMap((record) =>
+    record.data.map((r) => ({ ...r, device: record.device }))
   );
 }
-
-// CamAPSFx uploads data to diasend every 5 minutes. (Which is also the time after which new CGM values from Dexcom will be available)
-const interval = 10 * 60 * 1000;
 
 export function startSynchronization({
   pollingIntervalMs = interval,
@@ -258,8 +279,27 @@ export function startSynchronization({
 }: {
   pollingIntervalMs?: number;
 } & SyncDiasendDataToNightScoutArgs &
+  SyncDiasendGlucoseToNightscoutArgs &
   NightscoutProfileOptions = {}) {
-  const looper = new Looper<
+  const entriesLoop = new Looper<SyncDiasendGlucoseToNightscoutArgs>(
+    pollingIntervalMs,
+    async ({ dateTo, ...args } = {}) => {
+      const { latestRecordDate } = await syncDiasendGlucoseToNightscout({
+        dateTo,
+        ...args,
+      });
+      // remove the dateTo option
+      return {
+        ...args,
+        dateFrom: latestRecordDate
+          ? dayjs(latestRecordDate).add(1, "second").toDate()
+          : args.dateFrom,
+      };
+    },
+    "Entries"
+  ).loop({ dateFrom, ...syncArgs });
+
+  const treatmentsLoop = new Looper<
     SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions
   >(
     pollingIntervalMs,
@@ -271,32 +311,26 @@ export function startSynchronization({
         });
       // next run's data should be fetched where this run ended, so take a look at the records
       console.log(
-        `Scheduling ${Object.values(unprocessedRecords).reduce(
-          (sum, records) => sum + records.length,
-          0
-        )} records for processing in next run`
+        `Scheduling ${unprocessedRecords.length} records for processing in next run`
       );
       // remove the dateTo option
       return {
         ...args,
-        dateFrom: dayjs(latestRecordDate).add(1, "second").toDate(),
+        dateFrom: latestRecordDate
+          ? dayjs(latestRecordDate).add(1, "second").toDate()
+          : args.dateFrom,
         previousRecords: unprocessedRecords,
       };
     },
-    "Entries & Treatments"
+    "Treatments"
   ).loop({ dateFrom, ...syncArgs });
 
   // return a function that can be used to end the loop
   return () => {
-    looper.stop();
+    entriesLoop.stop();
+    treatmentsLoop.stop();
   };
 }
-
-type NightscoutProfileOptions = {
-  nightscoutProfileName?: string;
-  nightscoutProfileLoader?: () => Promise<Profile>;
-  nightscoutProfileHandler?: (profile: Profile) => Promise<Profile>;
-};
 
 export function startPumpSettingsSynchronization({
   diasendUsername = config.diasend.username,

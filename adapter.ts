@@ -7,6 +7,7 @@ import {
   DeviceData,
   GlucoseRecord,
   PatientRecord,
+  PatientRecordWithDeviceData,
   PumpSettings,
 } from "./diasend";
 import {
@@ -21,8 +22,7 @@ import {
 } from "./nightscout";
 
 export function diasendGlucoseRecordToNightscoutEntry(
-  record: GlucoseRecord,
-  device: DeviceData
+  record: PatientRecordWithDeviceData<GlucoseRecord>
 ): SensorGlucoseValueEntry | ManualGlucoseValueEntry {
   // FIXME: The created_at datetimes from diasend do not contain any timezone information which can be problematic
   const date = new Date(record.created_at);
@@ -35,7 +35,7 @@ export function diasendGlucoseRecordToNightscoutEntry(
     dateString: date.toISOString(),
     date: date.getTime(),
     app: "diasend",
-    device: `${device.model} (${device.serial})`,
+    device: `${record.device.model} (${record.device.serial})`,
   };
 
   if (isManualBloodGlucose) {
@@ -88,9 +88,8 @@ function isRecordCreatedWithinTimeSpan(
 }
 
 export function diasendRecordToNightscoutTreatment(
-  record: BolusRecord | CarbRecord,
-  allRecords: (BolusRecord | CarbRecord)[],
-  device: DeviceData
+  record: PatientRecordWithDeviceData<BolusRecord | CarbRecord>,
+  allRecords: PatientRecordWithDeviceData<BolusRecord | CarbRecord>[]
 ):
   | MealBolusTreatment
   | CorrectionBolusTreatment
@@ -106,7 +105,7 @@ export function diasendRecordToNightscoutTreatment(
       carbs: parseInt(record.value),
       app: nightscoutApp,
       date: new Date(record.created_at).getTime(),
-      device: `${device.model} (${device.serial})`,
+      device: `${record.device.model} (${record.device.serial})`,
     };
   }
 
@@ -117,8 +116,9 @@ export function diasendRecordToNightscoutTreatment(
   const isMealBolus = "programmed_meal" in bolusRecord;
   if (isMealBolus) {
     const carbRecord = allRecords
-      .filter<CarbRecord>(
-        (record): record is CarbRecord => record.type === "carb"
+      .filter<PatientRecordWithDeviceData<CarbRecord>>(
+        (record): record is PatientRecordWithDeviceData<CarbRecord> =>
+          record.type === "carb"
       )
       .find(
         // carbs should have been recorded within the next minute after bolus
@@ -146,7 +146,7 @@ export function diasendRecordToNightscoutTreatment(
       notes: notesParts.length ? notesParts.join(", ") : undefined,
       app: nightscoutApp,
       date: new Date(bolusRecord.created_at).getTime(),
-      device: `${device.model} (${device.serial})`,
+      device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
     };
   } else {
     if (bolusRecord.programmed_bg_correction) {
@@ -155,7 +155,7 @@ export function diasendRecordToNightscoutTreatment(
         insulin: bolusRecord.programmed_bg_correction,
         app: nightscoutApp,
         date: new Date(bolusRecord.created_at).getTime(),
-        device: `${device.model} (${device.serial})`,
+        device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
       };
     } else {
       console.warn("Bolus record cannot be handled", bolusRecord);

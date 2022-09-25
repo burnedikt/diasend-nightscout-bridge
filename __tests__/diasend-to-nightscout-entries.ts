@@ -1,5 +1,9 @@
 import { diasendGlucoseRecordToNightscoutEntry } from "../adapter";
-import { DeviceData, GlucoseRecord } from "../diasend";
+import {
+  DeviceData,
+  GlucoseRecord,
+  PatientRecordWithDeviceData,
+} from "../diasend";
 import {
   ManualGlucoseValueEntry,
   SensorGlucoseValueEntry,
@@ -14,7 +18,7 @@ const testDevice: DeviceData = {
 describe("testing conversion of diasend patient data to nightscout entries", () => {
   test("continuous reading", () => {
     // given a continuous glucose reading from diasend
-    const glucoseReading: GlucoseRecord = {
+    const glucoseReading: PatientRecordWithDeviceData<GlucoseRecord> = {
       type: "glucose",
       created_at: "2022-08-26T16:33:44",
       value: 232,
@@ -25,15 +29,13 @@ describe("testing conversion of diasend patient data to nightscout entries", () 
           description: "Continous reading",
         },
       ],
+      // and some device data
+      device: testDevice,
     };
-    // and some device data
-    const device = testDevice;
 
     // when converting the reading to a nightscout entry
-    const nightscoutEntry = diasendGlucoseRecordToNightscoutEntry(
-      glucoseReading,
-      device
-    );
+    const nightscoutEntry =
+      diasendGlucoseRecordToNightscoutEntry(glucoseReading);
 
     // then expect it to look like this
     expect(nightscoutEntry).toStrictEqual<SensorGlucoseValueEntry>({
@@ -49,7 +51,7 @@ describe("testing conversion of diasend patient data to nightscout entries", () 
 
   test("manual blood glucose measurement", () => {
     // given a manual blood glucose measurement
-    const glucoseReading: GlucoseRecord = {
+    const glucoseReading: PatientRecordWithDeviceData<GlucoseRecord> = {
       type: "glucose",
       created_at: "2022-08-26T16:04:37",
       value: 178,
@@ -60,15 +62,13 @@ describe("testing conversion of diasend patient data to nightscout entries", () 
           description: "Manual",
         },
       ],
+      // and some device data
+      device: testDevice,
     };
-    // and some device data
-    const device = testDevice;
 
     // when converting the reading to a nightscout entry
-    const nightscoutEntry = diasendGlucoseRecordToNightscoutEntry(
-      glucoseReading,
-      device
-    );
+    const nightscoutEntry =
+      diasendGlucoseRecordToNightscoutEntry(glucoseReading);
 
     // then expect it to look like this
     expect(nightscoutEntry).toStrictEqual<ManualGlucoseValueEntry>({

@@ -76,6 +76,10 @@ export interface DeviceData {
   model: string;
 }
 
+export type PatientRecordWithDeviceData<T extends PatientRecord> = T & {
+  device: DeviceData;
+};
+
 const diasendClient = axios.create({
   baseURL: "https://api.diasend.com/1",
   headers: {
