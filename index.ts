@@ -167,14 +167,18 @@ async function syncDiasendDataToNightscout({
   dateTo = new Date(),
   previousRecords = [],
 }: SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions) {
-  const records = await getDiasendPatientData({
-    diasendUsername,
-    diasendPassword,
-    diasendClientId,
-    diasendClientSecret,
-    dateFrom,
-    dateTo,
-  });
+  const records = (
+    await getDiasendPatientData({
+      diasendUsername,
+      diasendPassword,
+      diasendClientId,
+      diasendClientSecret,
+      dateFrom,
+      dateTo,
+    })
+  )
+    // filter out glucose records as they're handled independently
+    .filter((r) => r.type !== "glucose");
 
   // include any unprocessed records from previous runs
   records.unshift(...previousRecords);
@@ -222,11 +226,13 @@ async function syncDiasendDataToNightscout({
     treatments: treatments ?? [],
     profile,
     latestRecordDate:
-      treatments.length > 0
+      records.length > 0
         ? new Date(
-            treatments
+            records
               // sort records by date (descending)
-              .sort((r1, r2) => dayjs(r2.date).diff(dayjs(r1.date)))[0].date
+              .sort((r1, r2) =>
+                dayjs(r2.created_at).diff(dayjs(r1.created_at))
+              )[0].created_at
           )
         : null,
     unprocessedRecords,
@@ -268,7 +274,10 @@ async function getDiasendPatientData({
   // using the diasend token, now fetch the patient records per device
   const records = await getPatientData(diasendAccessToken, dateFrom, dateTo);
   return records.flatMap((record) =>
-    record.data.map((r) => ({ ...r, device: record.device }))
+    record.data.map<PatientRecordWithDeviceData<PatientRecord>>((r) => ({
+      ...r,
+      device: record.device,
+    }))
   );
 }
 
