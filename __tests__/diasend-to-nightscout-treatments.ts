@@ -341,4 +341,98 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     expect(unprocessedRecords).toHaveLength(1);
     expect((unprocessedRecords[0] as BolusRecord).programmed_meal).toBe(0.5);
   });
+
+  test("identifies meal bolus if carb record coming after bolus", () => {
+    // Given a meal bolus where the insulin_bolus event comes prior to the matching carbs
+    const records: PatientRecordWithDeviceData<PatientRecord>[] = [
+      {
+        type: "carb",
+        created_at: "2022-11-05T13:28:55",
+        value: "3",
+        unit: "g",
+        flags: [],
+        device: testDevice,
+      },
+      {
+        type: "insulin_bolus",
+        created_at: "2022-11-05T13:28:58",
+        unit: "U",
+        total_value: 0.1,
+        spike_value: 0.1,
+        suggested: 0.1,
+        suggestion_overridden: "no",
+        suggestion_based_on_bg: "no",
+        suggestion_based_on_carb: "yes",
+        programmed_meal: 0.1,
+        flags: [
+          {
+            flag: 1035,
+            description: "Bolus type ezcarb",
+          },
+        ],
+        device: testDevice,
+      },
+    ];
+
+    // When identifying the treatments
+    const { treatments, unprocessedRecords } = identifyTreatments(records);
+
+    // Then expect to get the bolus with matching carbs
+    expect(unprocessedRecords).toHaveLength(0);
+    expect(treatments).toHaveLength(1);
+
+    expect((treatments[0] as MealBolusTreatment).carbs).toBe(3);
+    expect((treatments[0] as MealBolusTreatment).insulin).toBe(0.1);
+  });
+
+  test("takes closest carb record for meal bolus", () => {
+    // Given a meal bolus where the insulin_bolus event comes prior to the matching carbs and there's a preceeding carb correction
+    const records: PatientRecordWithDeviceData<PatientRecord>[] = [
+      {
+        type: "carb",
+        created_at: "2022-11-05T13:28:00",
+        value: "10",
+        unit: "g",
+        flags: [],
+        device: testDevice,
+      },
+      {
+        type: "carb",
+        created_at: "2022-11-05T13:28:55",
+        value: "5",
+        unit: "g",
+        flags: [],
+        device: testDevice,
+      },
+      {
+        type: "insulin_bolus",
+        created_at: "2022-11-05T13:28:58",
+        unit: "U",
+        total_value: 0.1,
+        spike_value: 0.1,
+        suggested: 0.1,
+        suggestion_overridden: "no",
+        suggestion_based_on_bg: "no",
+        suggestion_based_on_carb: "yes",
+        programmed_meal: 0.1,
+        flags: [
+          {
+            flag: 1035,
+            description: "Bolus type ezcarb",
+          },
+        ],
+        device: testDevice,
+      },
+    ];
+
+    // When identifying the treatments
+    const { treatments } = identifyTreatments(records);
+
+    // Then expect to get the bolus with matching carbs
+    expect(treatments).toHaveLength(2);
+
+    expect((treatments[0] as CarbCorrectionTreatment).carbs).toBe(10);
+    expect((treatments[1] as MealBolusTreatment).carbs).toBe(5);
+    expect((treatments[1] as MealBolusTreatment).insulin).toBe(0.1);
+  });
 });

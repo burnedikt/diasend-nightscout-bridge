@@ -62,18 +62,40 @@ function doCarbsBelongToBolus(
   carbRecord: CarbRecord,
   others: (CarbRecord | BolusRecord)[]
 ) {
-  return !!others
+  const bolusRecord = others
     .filter<BolusRecord>(
       (r): r is BolusRecord =>
         r.type === "insulin_bolus" && "programmed_meal" in r
     )
-    .find((bolusRecord) =>
+    .filter((bolusRecord) =>
       isRecordCreatedWithinTimeSpan(
         carbRecord,
         bolusRecord,
         diasendBolusCarbTimeDifferenceThresholdMilliseconds
       )
-    );
+    )
+    // there could be multiple bolus records within the timespan. We look at the closest one only
+    .sort(
+      (r1, r2) =>
+        Math.abs(dayjs(r1.created_at).diff(carbRecord.created_at)) -
+        Math.abs(dayjs(r2.created_at).diff(carbRecord.created_at))
+    )
+    // get first (= closest) bolus record
+    .find(() => true);
+
+  if (!bolusRecord) {
+    return false;
+  }
+
+  // if there's another carb record between the carb record in question and the bolus, that one takes precedence
+  const index = others.indexOf(carbRecord);
+  const bolusRecordIndex = others.indexOf(bolusRecord);
+  const lowerIndex = index > bolusRecordIndex ? bolusRecordIndex : index;
+  const upperIndex = lowerIndex === bolusRecordIndex ? index : bolusRecordIndex;
+  if (others.slice(lowerIndex + 1, upperIndex).some((v) => v.type === "carb")) {
+    return false;
+  }
+  return true;
 }
 
 function isRecordCreatedWithinTimeSpan(
@@ -82,8 +104,7 @@ function isRecordCreatedWithinTimeSpan(
   timespanMilliseconds: number
 ) {
   return (
-    dayjs(r1.created_at) > dayjs(r2.created_at) &&
-    dayjs(r1.created_at).diff(r2.created_at) <= timespanMilliseconds
+    Math.abs(dayjs(r1.created_at).diff(r2.created_at)) <= timespanMilliseconds
   );
 }
 
@@ -95,7 +116,7 @@ export function diasendRecordToNightscoutTreatment(
   | CorrectionBolusTreatment
   | CarbCorrectionTreatment
   | undefined {
-  // if there's a carb record, check if there's a preceeding (meal) bolus record
+  // if there's a carb record, check if there's a preceeding or following (meal) bolus record
   if (record.type == "carb") {
     // if so, it's a meal / snack bolus and already handled
     if (doCarbsBelongToBolus(record, allRecords)) return undefined;
@@ -111,7 +132,7 @@ export function diasendRecordToNightscoutTreatment(
 
   const bolusRecord = record;
   // for a (meal) bolus, find the corresponding carbs record, if any
-  // the carbs record is usually added ~1 minute later to diasend than the bolus for some reason
+  // the carbs record is usually added within 1 minute prior or after the bolus for some reason
   // if it's not a meal bolus, it's a correction bolus
   const isMealBolus = "programmed_meal" in bolusRecord;
   if (isMealBolus) {
@@ -120,15 +141,23 @@ export function diasendRecordToNightscoutTreatment(
         (record): record is PatientRecordWithDeviceData<CarbRecord> =>
           record.type === "carb"
       )
-      .find(
-        // carbs should have been recorded within the next minute after bolus
+      .filter(
+        // carbs should have been recorded within the next minute after or before a bolus
         (carbRecord) =>
           isRecordCreatedWithinTimeSpan(
             carbRecord,
             bolusRecord,
             diasendBolusCarbTimeDifferenceThresholdMilliseconds
           )
-      );
+      )
+      // there could be multiple carb entries within the given timespan, we need to take the closest one
+      .sort(
+        (c1, c2) =>
+          Math.abs(dayjs(c1.created_at).diff(bolusRecord.created_at)) -
+          Math.abs(dayjs(c2.created_at).diff(bolusRecord.created_at))
+      )
+      // get first element or null
+      .find(() => true);
 
     const notesParts = [];
     if (!carbRecord) {
