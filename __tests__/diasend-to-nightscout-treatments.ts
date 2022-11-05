@@ -297,7 +297,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     expect((treatments[1] as MealBolusTreatment).insulin).toBe(0.5);
   });
 
-  test("throws an error if no matching carb record for bolus", () => {
+  test("remembers bolus records without matching carbs for next run", () => {
     // Given a bunch of records that contain a bolus for a programmed meal but miss the corresponding carbs
     const records: PatientRecordWithDeviceData<PatientRecord>[] = [
       {
