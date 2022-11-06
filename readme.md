@@ -8,6 +8,7 @@ While diasend will eventually be replaced by glooko which will provide a more op
 
 ✅ Glucose Values (CGM) <br />
 ✅ Correction and Meal Boli <br />
+✅ Carb Corrections <br />
 ✅ Basal rates <br />
 ✅ Pump settings (see [issue][pump-settings-issue])
 
