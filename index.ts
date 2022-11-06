@@ -63,18 +63,22 @@ type NightscoutProfileOptions = {
   nightscoutProfileHandler?: (profile: Profile) => Promise<Profile>;
 };
 
+type PostponedPatientRecordWithDeviceData<T extends PatientRecord> =
+  PatientRecordWithDeviceData<T> & { postponed?: boolean };
+
 export function identifyTreatments(
   records: PatientRecordWithDeviceData<PatientRecord>[]
 ) {
-  const unprocessedRecords: PatientRecordWithDeviceData<
+  const unprocessedRecords: PostponedPatientRecordWithDeviceData<
     CarbRecord | BolusRecord
   >[] = [];
   const treatments = records
-    .filter<PatientRecordWithDeviceData<CarbRecord | BolusRecord>>(
+    .filter<PostponedPatientRecordWithDeviceData<CarbRecord | BolusRecord>>(
       (
         record
-      ): record is PatientRecordWithDeviceData<CarbRecord | BolusRecord> =>
-        ["insulin_bolus", "carb"].includes(record.type)
+      ): record is PostponedPatientRecordWithDeviceData<
+        CarbRecord | BolusRecord
+      > => ["insulin_bolus", "carb"].includes(record.type)
     )
     .reduce<
       (
@@ -90,10 +94,17 @@ export function identifyTreatments(
         );
 
         if (treatment) {
-          treatments.push(treatment);
+          // if the detected treatment is a carb correction, we need to distinguish whether this is the first time we're processing this
+          // due to the looping nature, the algorithm may deem the carb record to be a carb correction when it is actually just belonging
+          // to a bolus which is not yet available within the list of records
+          if (treatment?.eventType === "Carb Correction" && !record.postponed) {
+            unprocessedRecords.push({ ...record, postponed: true });
+          } else {
+            treatments.push(treatment);
+          }
         }
       } catch (e) {
-        // if an error happened, this means, we'll need to remember the record and try to resolve it in the next run
+        // if an error happened, this means we'll need to remember the record and try to resolve it in the next run
         unprocessedRecords.push(record);
       }
 

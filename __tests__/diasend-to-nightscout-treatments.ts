@@ -286,15 +286,15 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     ];
 
     // When passing through the converter
-    const { treatments } = identifyTreatments(records);
+    const { treatments, unprocessedRecords } = identifyTreatments(records);
 
-    // Then expect to obtain a hypo treatment and a meal bolus
-    expect(treatments).toHaveLength(2);
-    expect(treatments[0].eventType).toBe("Carb Correction");
-    expect((treatments[0] as CarbCorrectionTreatment).carbs).toBe(7);
-    expect(treatments[1].eventType).toBe("Meal Bolus");
-    expect((treatments[1] as MealBolusTreatment).carbs).toBe(11);
-    expect((treatments[1] as MealBolusTreatment).insulin).toBe(0.5);
+    // Then expect to obtain a potential carb correction (postponed to next run) and a meal bolus
+    expect(treatments).toHaveLength(1);
+    expect(unprocessedRecords).toHaveLength(1);
+    expect(unprocessedRecords[0].type).toBe("carb");
+    expect(treatments[0].eventType).toBe("Meal Bolus");
+    expect((treatments[0] as MealBolusTreatment).carbs).toBe(11);
+    expect((treatments[0] as MealBolusTreatment).insulin).toBe(0.5);
   });
 
   test("remembers bolus records without matching carbs for next run", () => {
@@ -426,13 +426,33 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     ];
 
     // When identifying the treatments
-    const { treatments } = identifyTreatments(records);
+    const { treatments, unprocessedRecords } = identifyTreatments(records);
 
-    // Then expect to get the bolus with matching carbs
-    expect(treatments).toHaveLength(2);
+    // Then expect to get the bolus with matching carbs and a postponsed carb record (will be a carb correction in next run)
+    expect(treatments).toHaveLength(1);
 
-    expect((treatments[0] as CarbCorrectionTreatment).carbs).toBe(10);
-    expect((treatments[1] as MealBolusTreatment).carbs).toBe(5);
-    expect((treatments[1] as MealBolusTreatment).insulin).toBe(0.1);
+    expect(unprocessedRecords[0].type).toBe("carb");
+    expect((treatments[0] as MealBolusTreatment).carbs).toBe(5);
+    expect((treatments[0] as MealBolusTreatment).insulin).toBe(0.1);
+  });
+
+  test("postpones processing of carb record if no matching bolus", () => {
+    // Given a carb record without a matching bolus (in the currently processed set of records)
+    const records: PatientRecordWithDeviceData<PatientRecord>[] = [
+      {
+        type: "carb",
+        created_at: "2022-11-05T13:28:00",
+        value: "10",
+        unit: "g",
+        flags: [],
+        device: testDevice,
+      },
+    ];
+
+    // When attempting to identify treatments
+    const { treatments, unprocessedRecords } = identifyTreatments(records);
+
+    // The carb record is kept as a unprocessed record for the next run
+    expect(unprocessedRecords).toHaveLength(1);
   });
 });
