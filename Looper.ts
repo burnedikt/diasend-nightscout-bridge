@@ -23,9 +23,9 @@ export class Looper<TLoopArgs = void> {
     let nextArgs: TLoopArgs | undefined;
     // run the looping function, then schedule the next run (unless it should be stopped)
     void this.loopingFun(args)
-      .then((_argsCalcualtedByLoop) => {
+      .then((argsCalculatedByLoop) => {
         // schedule next run with the new args calcualted by this run
-        nextArgs = _argsCalcualtedByLoop;
+        nextArgs = argsCalculatedByLoop;
       })
       .catch((error) => {
         console.error(error);
