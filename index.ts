@@ -147,7 +147,7 @@ async function syncDiasendGlucoseToNightscout({
       entries.length > 0
         ? new Date(
             // get latest record's date
-            entries.sort((a, b) => dayjs(b.date).diff(dayjs(a.date)))[0].date
+            entries.sort((a, b) => dayjs(b.date).diff(a.date))[0].date
           )
         : null,
   };
@@ -179,6 +179,19 @@ async function syncDiasendDataToNightscout({
   )
     // filter out glucose records as they're handled independently
     .filter((r) => r.type !== "glucose");
+
+  // calculate the latest record date
+  // this has to be done before re-adding the previously postponed records
+  const latestRecordDate =
+    records.length > 0
+      ? new Date(
+          records
+            // sort records by date (descending)
+            .sort((r1, r2) =>
+              dayjs(r2.created_at).diff(r1.created_at)
+            )[0].created_at
+        )
+      : null;
 
   // include any unprocessed records from previous runs
   records.unshift(...previousRecords);
@@ -225,17 +238,10 @@ async function syncDiasendDataToNightscout({
   return {
     treatments: treatments ?? [],
     profile,
-    latestRecordDate:
-      records.length > 0
-        ? new Date(
-            records
-              // sort records by date (descending)
-              .sort((r1, r2) =>
-                dayjs(r2.created_at).diff(dayjs(r1.created_at))
-              )[0].created_at
-          )
-        : null,
-    unprocessedRecords,
+    latestRecordDate,
+    unprocessedRecords: unprocessedRecords
+      // prevent any of the records that were unprocessed previously to be again in the list of unprocessed records
+      .filter((record) => previousRecords.indexOf(record) === -1),
   };
 }
 
