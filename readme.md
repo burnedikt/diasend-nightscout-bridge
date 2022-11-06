@@ -80,9 +80,10 @@ services:
 
 ## Notes & Known Issues
 
-- Up to 5 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS | Fx only
+- Up to 10 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS | Fx only
 exports data to diasend so it can take up to 5 minutes until it will appear in
-nightscout. This delay can be reduced by altering the polling interval (currently only [controllable via source code][change-polling-interval]).
+nightscout. This delay can be partially reduced by altering the polling interval (currently only [controllable via source code][change-polling-interval]).
+- Due to the nature of the data provided by diasend and the polling loop, we need to delay processing of some events into the next loop running x minutes later as e.g. meal boli are split on the diasend side into separate events at different times so sometimes not all events belonging together are in the same batch of events to be processed, thereby forcing us to check them again in the next loop before deciding what type of treatment should be sent to diasend. See [this issue][postponed-carb-events-issue] for more details.
 - Timezone issues: The timezone of the server / computer running this project
   needs to match the timezone in which the values were sent to diasend, i.e. the timezone of the device generating the data for diasend, see also the [configuration section above](#configuration)
 
@@ -123,3 +124,4 @@ This project is intended for educational and informational purposes only. It rel
 [pump-settings-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/1
 [File an issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/new/choose
 [docker-deployment-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/16
+[postponed-carb-events-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/15#issuecomment-1297664209
