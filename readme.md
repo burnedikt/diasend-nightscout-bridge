@@ -49,6 +49,35 @@ To run the bridge, ensure that all required environment variables are set and si
 yarn start
 ```
 
+#### Docker
+
+You can also run the bridge as a docker container either side-by-side with nightscout (if it is running containerized using `docker` or `docker-compose`). To do so, you can use the [Dockerfile](./Dockerfile) within this repository to build the bridge into a docker container image:
+
+```sh
+docker build -t diasend2nightscout .
+```
+
+You can use the resulting container image (in this case named `diasend2nightscout`) to run the bridge as a container using `docker-compose` like:
+
+```yaml
+# nightscout services
+
+services:
+  diasend-bridge:
+    image: diasend2nightscout
+    # alternatively, you can also configure a build section here to skip the explicit build step above. uncomment the following lines to do so
+    # build:
+    #   context: .
+    env:
+      DIASEND_USERNAME: <diasend-username>
+      DIASEND_PASSWORD: <diasend-password>
+      NIGHTSCOUT_URL: <url-of-nightscout-instance>
+      NIGHTSCOUT_API_SECRET: <retracted>
+      # ... other environment variables for configuration, see readme
+```
+
+... or directly using docker à la `docker run -e DIASEND_USERNAME=... -e DIASEND_PASSWORD=...diasend2nightscout`. [See here][docker-deployment-issue] for more details.
+
 ## Notes & Known Issues
 
 - Up to 5 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS | Fx only
@@ -93,3 +122,4 @@ This project is intended for educational and informational purposes only. It rel
 [change-polling-interval]: https://github.com/burnedikt/diasend-nightscout-bridge/blob/f29f671dfa74bf9b14ae8610d84c8d58a654c37f/index.ts#L190
 [pump-settings-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/1
 [File an issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/new/choose
+[docker-deployment-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/16
