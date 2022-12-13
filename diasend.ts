@@ -123,6 +123,9 @@ export async function getPatientData(
   date_from: Date,
   date_to: Date
 ): Promise<DiasendCGMResponse> {
+  console.log(
+    `Fetching diasend patient records between ${date_from.toISOString()} and ${date_to.toISOString()}`
+  );
   const response = await diasendClient.get<DiasendCGMResponse>(
     "/patient/data",
     {
