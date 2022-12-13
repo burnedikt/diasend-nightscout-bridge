@@ -18,6 +18,7 @@ import {
   Profile,
   ProfileConfig,
   SensorGlucoseValueEntry,
+  TempBasalTreatment,
   TimeBasedValue,
 } from "./nightscout";
 
@@ -58,10 +59,7 @@ export function diasendGlucoseRecordToNightscoutEntry(
 const diasendBolusCarbTimeDifferenceThresholdMilliseconds = 60 * 1000;
 const nightscoutApp = "diasend";
 
-function doCarbsBelongToBolus(
-  carbRecord: CarbRecord,
-  others: (CarbRecord | BolusRecord)[]
-) {
+function doCarbsBelongToBolus(carbRecord: CarbRecord, others: PatientRecord[]) {
   const bolusRecord = others
     .filter<BolusRecord>(
       (r): r is BolusRecord =>
@@ -108,14 +106,32 @@ function isRecordCreatedWithinTimeSpan(
   );
 }
 
+type NonGlucoseRecords = BasalRecord | BolusRecord | CarbRecord;
+
 export function diasendRecordToNightscoutTreatment(
-  record: PatientRecordWithDeviceData<BolusRecord | CarbRecord>,
-  allRecords: PatientRecordWithDeviceData<BolusRecord | CarbRecord>[]
+  record: PatientRecordWithDeviceData<NonGlucoseRecords>,
+  allRecords: PatientRecordWithDeviceData<NonGlucoseRecords>[]
 ):
   | MealBolusTreatment
   | CorrectionBolusTreatment
   | CarbCorrectionTreatment
+  | TempBasalTreatment
   | undefined {
+  const baseTreatmentData = {
+    app: nightscoutApp,
+    date: new Date(record.created_at).getTime(),
+    device: `${record.device.model} (${record.device.serial})`,
+  };
+
+  // temp basal changes can be handled directly
+  if (record.type === "insulin_basal") {
+    return {
+      eventType: "Temp Basal",
+      absolute: record.value,
+      ...baseTreatmentData,
+    };
+  }
+
   // if there's a carb record, check if there's a preceeding or following (meal) bolus record
   if (record.type == "carb") {
     // if so, it's a meal / snack bolus and already handled
@@ -124,9 +140,7 @@ export function diasendRecordToNightscoutTreatment(
     return {
       eventType: "Carb Correction",
       carbs: parseInt(record.value),
-      app: nightscoutApp,
-      date: new Date(record.created_at).getTime(),
-      device: `${record.device.model} (${record.device.serial})`,
+      ...baseTreatmentData,
     };
   }
 
@@ -173,18 +187,16 @@ export function diasendRecordToNightscoutTreatment(
       insulin: bolusRecord.total_value,
       carbs: !carbRecord ? undefined : parseInt(carbRecord.value),
       notes: notesParts.length ? notesParts.join(", ") : undefined,
-      app: nightscoutApp,
+      ...baseTreatmentData,
       date: new Date(bolusRecord.created_at).getTime(),
-      device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
     };
   } else {
     if (bolusRecord.programmed_bg_correction) {
       return {
         eventType: "Correction Bolus",
         insulin: bolusRecord.programmed_bg_correction,
-        app: nightscoutApp,
+        ...baseTreatmentData,
         date: new Date(bolusRecord.created_at).getTime(),
-        device: `${bolusRecord.device.model} (${bolusRecord.device.serial})`,
       };
     } else {
       console.warn("Bolus record cannot be handled", bolusRecord);

@@ -76,7 +76,9 @@ export interface DeviceData {
   model: string;
 }
 
-export type PatientRecordWithDeviceData<T extends PatientRecord> = T & {
+export type PatientRecordWithDeviceData<
+  T extends PatientRecord = PatientRecord
+> = T & {
   device: DeviceData;
 };
 

@@ -48,8 +48,15 @@ export interface ManualGlucoseValueEntry extends Entry {
   mbg: number;
 }
 
+export type TreatmentType =
+  | "Meal Bolus"
+  | "Correction Bolus"
+  | "BG Check"
+  | "Carb Correction"
+  | "Temp Basal";
+
 export interface Treatment extends Base {
-  eventType: "Meal Bolus" | "Correction Bolus" | "BG Check" | "Carb Correction";
+  eventType: TreatmentType;
   // Description/notes of treatment.
   notes?: string;
   // Who entered the treatment.
@@ -88,6 +95,14 @@ export interface CarbCorrectionTreatment extends Treatment {
   eventType: "Carb Correction";
   // Amount of carbs given.
   carbs?: number;
+}
+
+export interface TempBasalTreatment extends Treatment {
+  eventType: "Temp Basal";
+  // Amount of insulin, if any. Given in Units per hour (U/h)
+  absolute: number;
+  // Number of minutes the temporary basal rate changes is applied
+  duration?: number;
 }
 
 function getNightscoutClient(apiSecret = config.nightscout.apiSecret) {

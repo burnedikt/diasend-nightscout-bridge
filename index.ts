@@ -25,6 +25,7 @@ import {
   updateProfile,
   ProfileConfig,
   CarbCorrectionTreatment,
+  TempBasalTreatment,
 } from "./nightscout";
 import {
   diasendRecordToNightscoutTreatment,
@@ -69,22 +70,21 @@ type PostponedPatientRecordWithDeviceData<T extends PatientRecord> =
 export function identifyTreatments(
   records: PatientRecordWithDeviceData<PatientRecord>[]
 ) {
-  const unprocessedRecords: PostponedPatientRecordWithDeviceData<
-    CarbRecord | BolusRecord
-  >[] = [];
+  type SupportedRecordType = PostponedPatientRecordWithDeviceData<
+    CarbRecord | BolusRecord | BasalRecord
+  >;
+
+  const unprocessedRecords: SupportedRecordType[] = [];
   const treatments = records
-    .filter<PostponedPatientRecordWithDeviceData<CarbRecord | BolusRecord>>(
-      (
-        record
-      ): record is PostponedPatientRecordWithDeviceData<
-        CarbRecord | BolusRecord
-      > => ["insulin_bolus", "carb"].includes(record.type)
+    .filter<SupportedRecordType>((record): record is SupportedRecordType =>
+      ["insulin_bolus", "carb", "insulin_basal"].includes(record.type)
     )
     .reduce<
       (
         | MealBolusTreatment
         | CorrectionBolusTreatment
         | CarbCorrectionTreatment
+        | TempBasalTreatment
       )[]
     >((treatments, record, _index, allRecords) => {
       try {
@@ -171,13 +171,10 @@ async function syncDiasendDataToNightscout({
   diasendClientSecret = config.diasend.clientSecret,
   nightscoutTreatmentsHandler = (treatments) =>
     reportTreatmentsToNightscout(treatments),
-  nightscoutProfileName = config.nightscout.profileName!,
-  nightscoutProfileHandler = (profile) => updateProfile(profile),
-  nightscoutProfileLoader = () => fetchProfile(),
   dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
   previousRecords = [],
-}: SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions) {
+}: SyncDiasendDataToNightScoutArgs) {
   const records = (
     await getDiasendPatientData({
       diasendUsername,
@@ -207,48 +204,18 @@ async function syncDiasendDataToNightscout({
   // include any unprocessed records from previous runs
   records.unshift(...previousRecords);
 
-  // handle insulin boli and carbs
+  // handle insulin boli, carbs and temp basal rates
   const { treatments: nightscoutTreatments, unprocessedRecords } =
     identifyTreatments(records);
-
-  // handle basal rates
-  const existingProfile = await nightscoutProfileLoader();
-  const existingProfileConfig: ProfileConfig =
-    nightscoutProfileName in existingProfile.store
-      ? existingProfile.store[nightscoutProfileName]
-      : existingProfile.store[existingProfile.defaultProfile];
-  const basalRecords = records.filter<PatientRecordWithDeviceData<BasalRecord>>(
-    (record): record is PatientRecordWithDeviceData<BasalRecord> =>
-      record.type === "insulin_basal"
-  );
-  const updatedBasalProfile = updateBasalProfile(
-    existingProfileConfig.basal || [],
-    basalRecords
-  );
-  const updatedProfile: Profile = {
-    ...existingProfile,
-    store: {
-      ...existingProfile.store,
-      [nightscoutProfileName]: {
-        ...existingProfileConfig,
-        basal: updatedBasalProfile,
-      },
-    },
-  };
 
   console.log(
     `Sending ${nightscoutTreatments.length} treatments to nightscout`
   );
-  console.log(`Updating basal profile based on ${basalRecords.length} records`);
   // send them to nightscout
-  const [treatments, profile] = await Promise.all([
-    nightscoutTreatmentsHandler(nightscoutTreatments),
-    nightscoutProfileHandler(updatedProfile),
-  ]);
+  const treatments = await nightscoutTreatmentsHandler(nightscoutTreatments);
 
   return {
     treatments: treatments ?? [],
-    profile,
     latestRecordDate,
     unprocessedRecords: unprocessedRecords
       // prevent any of the records that were unprocessed previously to be again in the list of unprocessed records
@@ -259,7 +226,7 @@ async function syncDiasendDataToNightscout({
 // CamAPSFx uploads data to diasend every 5 minutes. (Which is also the time after which new CGM values from Dexcom will be available)
 const interval = 5 * 60 * 1000;
 
-async function getDiasendPatientData({
+export async function getDiasendPatientData({
   diasendUsername,
   diasendPassword,
   diasendClientId,
@@ -305,8 +272,7 @@ export function startSynchronization({
 }: {
   pollingIntervalMs?: number;
 } & SyncDiasendDataToNightScoutArgs &
-  SyncDiasendGlucoseToNightscoutArgs &
-  NightscoutProfileOptions = {}) {
+  SyncDiasendGlucoseToNightscoutArgs = {}) {
   const entriesLoop = new Looper<SyncDiasendGlucoseToNightscoutArgs>(
     pollingIntervalMs,
     async ({ dateTo, ...args } = {}) => {
@@ -325,9 +291,7 @@ export function startSynchronization({
     "Entries"
   ).loop({ dateFrom, ...syncArgs });
 
-  const treatmentsLoop = new Looper<
-    SyncDiasendDataToNightScoutArgs & NightscoutProfileOptions
-  >(
+  const treatmentsLoop = new Looper<SyncDiasendDataToNightScoutArgs>(
     pollingIntervalMs,
     async ({ dateTo, ...args } = {}) => {
       const { latestRecordDate, unprocessedRecords } =
