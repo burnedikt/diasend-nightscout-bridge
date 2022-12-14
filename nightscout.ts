@@ -5,6 +5,8 @@ import crypto from "crypto";
 interface Base {
   // Required timestamp when the record or event occured, you can choose from three input formats\n- Unix epoch in milliseconds (1525383610088)\n- Unix epoch in seconds (1525383610)\n- ISO 8601 with optional timezone ('2018-05-03T21:40:10.088Z' or '2018-05-03T23:40:10.088+02:00')\n\nThe date is always stored in a normalized form - UTC with zero offset. If UTC offset was present, it is going to be set in the `utcOffset` field.\n\nNote&#58; this field is immutable by the client (it cannot be updated or patched)
   date: number;
+  // ISO string timestamp for when the record or event occurred. Hard requirement for some events
+  created_at?: string;
   // The device from which the data originated (including serial number of the device, if it is relevant and safe).\n\nNote&#58; this field is immutable by the client (it cannot be updated or patched)
   device?: string;
   // Application or system in which the record was entered by human or device for the first time.\n\nNote&#58; this field is immutable by the client (it cannot be updated or patched)
@@ -103,6 +105,8 @@ export interface TempBasalTreatment extends Treatment {
   absolute: number;
   // Number of minutes the temporary basal rate changes is applied
   duration?: number;
+  // ISO string timestamp for when the record or event occurred. Hard requirement for some events
+  created_at: string;
 }
 
 function getNightscoutClient(apiSecret = config.nightscout.apiSecret) {

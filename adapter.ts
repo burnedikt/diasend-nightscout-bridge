@@ -134,6 +134,7 @@ export function diasendRecordToNightscoutTreatment(
       absolute: record.value,
       duration: defaultTempBasalDurationMinutes,
       ...baseTreatmentData,
+      created_at: new Date(baseTreatmentData.date).toISOString(),
     };
   }
 

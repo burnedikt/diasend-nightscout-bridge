@@ -484,5 +484,8 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     expect(tempBasalTreatment.date).toBe(
       new Date("2022-11-05T13:28:00").getTime()
     );
+    expect(tempBasalTreatment.created_at).toBe(
+      new Date("2022-11-05T13:28:00").toISOString()
+    );
   });
 });
