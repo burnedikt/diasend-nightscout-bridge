@@ -125,6 +125,7 @@ export function diasendRecordToNightscoutTreatment(
     app: nightscoutApp,
     date: new Date(record.created_at).getTime(),
     device: `${record.device.model} (${record.device.serial})`,
+    created_at: new Date(record.created_at).toISOString(),
   };
 
   // temp basal changes can be handled directly
@@ -134,7 +135,6 @@ export function diasendRecordToNightscoutTreatment(
       absolute: record.value,
       duration: defaultTempBasalDurationMinutes,
       ...baseTreatmentData,
-      created_at: new Date(baseTreatmentData.date).toISOString(),
     };
   }
 
@@ -195,6 +195,7 @@ export function diasendRecordToNightscoutTreatment(
       notes: notesParts.length ? notesParts.join(", ") : undefined,
       ...baseTreatmentData,
       date: new Date(bolusRecord.created_at).getTime(),
+      created_at: new Date(bolusRecord.created_at).toISOString(),
     };
   } else {
     if (bolusRecord.programmed_bg_correction) {
@@ -203,6 +204,7 @@ export function diasendRecordToNightscoutTreatment(
         insulin: bolusRecord.programmed_bg_correction,
         ...baseTreatmentData,
         date: new Date(bolusRecord.created_at).getTime(),
+        created_at: new Date(bolusRecord.created_at).toISOString(),
       };
     } else {
       console.warn("Bolus record cannot be handled", bolusRecord);

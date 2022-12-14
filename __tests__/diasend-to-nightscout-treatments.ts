@@ -61,6 +61,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     // then expect it to look like this
     expect(nightscoutTreatment).toStrictEqual<MealBolusTreatment>({
       date: 1661530827000,
+      created_at: new Date(1661530827000).toISOString(),
       carbs: 18,
       eventType: "Meal Bolus",
       insulin: 0.7,
@@ -114,6 +115,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     // then expect it to look like this
     expect(nightscoutTreatment).toStrictEqual<MealBolusTreatment>({
       date: 1661419735000,
+      created_at: new Date(1661419735000).toISOString(),
       carbs: 11,
       eventType: "Meal Bolus",
       insulin: 0.3,
@@ -187,6 +189,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     // then expect it to look like this
     expect(nightscoutTreatment).toStrictEqual<CorrectionBolusTreatment>({
       date: 1661434931000,
+      created_at: new Date(1661434931000).toISOString(),
       eventType: "Correction Bolus",
       insulin: 0.2,
       device: "Test Pump (1111-22123)",
@@ -213,6 +216,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     // Then expect to obtain a hypo treatment
     expect(treatment).toStrictEqual<CarbCorrectionTreatment>({
       date: 1663501840000,
+      created_at: new Date(1663501840000).toISOString(),
       eventType: "Carb Correction",
       carbs: 5,
       device: "Test Pump (1111-22123)",
@@ -452,7 +456,7 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     ];
 
     // When attempting to identify treatments
-    const { treatments, unprocessedRecords } = identifyTreatments(records);
+    const { unprocessedRecords } = identifyTreatments(records);
 
     // The carb record is kept as a unprocessed record for the next run
     expect(unprocessedRecords).toHaveLength(1);
