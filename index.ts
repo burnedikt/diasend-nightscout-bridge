@@ -23,14 +23,12 @@ import {
   Profile,
   fetchProfile,
   updateProfile,
-  ProfileConfig,
   CarbCorrectionTreatment,
   TempBasalTreatment,
 } from "./nightscout";
 import {
   diasendRecordToNightscoutTreatment,
   diasendGlucoseRecordToNightscoutEntry,
-  updateBasalProfile,
   updateNightScoutProfileWithPumpSettings,
 } from "./adapter";
 import { Looper } from "./Looper";

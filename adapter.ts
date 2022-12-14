@@ -108,6 +108,10 @@ function isRecordCreatedWithinTimeSpan(
 
 type NonGlucoseRecords = BasalRecord | BolusRecord | CarbRecord;
 
+// the default duration for temp basal events
+// diasend doesn't provide any duration but we need it for nightscout
+const defaultTempBasalDurationMinutes = 20;
+
 export function diasendRecordToNightscoutTreatment(
   record: PatientRecordWithDeviceData<NonGlucoseRecords>,
   allRecords: PatientRecordWithDeviceData<NonGlucoseRecords>[]
@@ -128,6 +132,7 @@ export function diasendRecordToNightscoutTreatment(
     return {
       eventType: "Temp Basal",
       absolute: record.value,
+      duration: defaultTempBasalDurationMinutes,
       ...baseTreatmentData,
     };
   }
@@ -257,34 +262,6 @@ export function convertBasalRecord(basalRecord: BasalRecord): TimeBasedValue {
     timeAsSeconds: recordTimeAsSeconds,
     value: basalRecord.value,
   };
-}
-
-export function updateBasalProfile(
-  basalProfile: TimeBasedValue[],
-  basalRecords: BasalRecord[]
-): TimeBasedValue[] {
-  let updatedBasalProfile = [...basalProfile];
-
-  // ensure the basalRecords are sorted ascending by their datetime
-  basalRecords
-    .sort((b1, b2) => dayjs(b1.created_at).diff(dayjs(b2.created_at)))
-    .forEach((basalRecord) => {
-      const recordTime = dayjs(basalRecord.created_at);
-      const recordTimeAsSeconds = recordTime.diff(
-        recordTime.startOf("day"),
-        "seconds"
-      );
-      // delete all entries in the current basal profile after the record
-      updatedBasalProfile = updatedBasalProfile.filter(
-        (entry) =>
-          entry.timeAsSeconds !== undefined &&
-          entry.timeAsSeconds < recordTimeAsSeconds
-      );
-      // add the new entry
-      updatedBasalProfile.push(convertBasalRecord(basalRecord));
-    });
-
-  return updatedBasalProfile;
 }
 
 export function updateNightScoutProfileWithPumpSettings(

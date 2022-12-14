@@ -1,6 +1,7 @@
 import { identifyTreatments } from "../index";
 import { diasendRecordToNightscoutTreatment } from "../adapter";
 import {
+  BasalRecord,
   BolusRecord,
   CarbRecord,
   DeviceData,
@@ -11,6 +12,7 @@ import {
   CarbCorrectionTreatment,
   CorrectionBolusTreatment,
   MealBolusTreatment,
+  TempBasalTreatment,
 } from "../nightscout";
 
 const testDevice: DeviceData = {
@@ -454,5 +456,33 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
 
     // The carb record is kept as a unprocessed record for the next run
     expect(unprocessedRecords).toHaveLength(1);
+  });
+
+  test("imports insulin basal records as temp basal treatments", () => {
+    // Given a basal record
+    const records: PatientRecordWithDeviceData<BasalRecord>[] = [
+      {
+        type: "insulin_basal",
+        created_at: "2022-11-05T13:28:00",
+        value: 0.5,
+        unit: "U/h",
+        flags: [],
+        device: testDevice,
+      },
+    ];
+
+    // When attempting to identify treatments
+    const { treatments } = identifyTreatments(records);
+
+    // The basal record is transformed to a temp basal treatment
+    expect(treatments).toHaveLength(1);
+    const tempBasalTreatment: TempBasalTreatment =
+      treatments[0] as TempBasalTreatment;
+    expect(tempBasalTreatment.absolute).toBe(0.5);
+    // default duration should be 20 minutes (as otherwise nightscout will ignore the event)
+    expect(tempBasalTreatment.duration).toBe(20);
+    expect(tempBasalTreatment.date).toBe(
+      new Date("2022-11-05T13:28:00").getTime()
+    );
   });
 });
