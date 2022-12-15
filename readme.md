@@ -2,7 +2,7 @@
 
 Synchronizes continuuous glucose values (CGV) from [diasend] to [nightscout]. This can e.g. help CamAPS | Fx users to view their treatments and glucose values via nightscout.
 
-While diasend will eventually be replaced by glooko which will provide a more open API to access the data and forward it to nightscout, this project can help in the meantime. #WeAreNotWaiting
+While diasend will eventually be replaced by glooko which will (presumably) provide a more open API to access the data and forward it to nightscout, this project can help in the meantime. #WeAreNotWaiting
 
 ## Supported Features / Data
 
