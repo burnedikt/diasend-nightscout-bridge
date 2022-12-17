@@ -169,8 +169,8 @@ async function syncDiasendDataToNightscout({
   diasendClientSecret = config.diasend.clientSecret,
   nightscoutTreatmentsHandler = (treatments) =>
     reportTreatmentsToNightscout(treatments),
-  dateFrom = dayjs().subtract(10, "minutes").toDate(),
   dateTo = new Date(),
+  dateFrom = dayjs(dateTo).subtract(10, "minutes").toDate(),
   previousRecords = [],
 }: SyncDiasendDataToNightScoutArgs) {
   const records = (
