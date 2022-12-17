@@ -266,11 +266,14 @@ export async function getDiasendPatientData({
 export function startSynchronization({
   pollingIntervalMs = interval,
   dateFrom = dayjs().subtract(interval, "milliseconds").toDate(),
+  treatmentsLoopDelayMs = 0,
   ...syncArgs
 }: {
   pollingIntervalMs?: number;
 } & SyncDiasendDataToNightScoutArgs &
-  SyncDiasendGlucoseToNightscoutArgs = {}) {
+  SyncDiasendGlucoseToNightscoutArgs & {
+    treatmentsLoopDelayMs?: number;
+  } = {}) {
   const entriesLoop = new Looper<SyncDiasendGlucoseToNightscoutArgs>(
     pollingIntervalMs,
     async ({ dateTo, ...args } = {}) => {
@@ -284,6 +287,13 @@ export function startSynchronization({
         dateFrom: latestRecordDate
           ? dayjs(latestRecordDate).add(1, "second").toDate()
           : args.dateFrom,
+        dateTo: dayjs()
+          // add the time it takes for the next iteration of the loop to run
+          .add(pollingIntervalMs, "ms")
+          // subtract any configured delay (to catch any late-added events from diasend api
+          // see https://github.com/burnedikt/diasend-nightscout-bridge/issues/18)
+          .subtract(treatmentsLoopDelayMs, "ms")
+          .toDate(),
       };
     },
     "Entries"
