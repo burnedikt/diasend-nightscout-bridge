@@ -282,12 +282,12 @@ export function updateNightScoutProfileWithPumpSettings(
     diasendPumpSettingsToNightscoutProfile(pumpSettings);
 
   const previousProfileConfig =
-    existingProfile.store[options.nightscoutProfileName] || {};
+    existingProfile.store[options.nightscoutProfileName] ?? {};
 
   return {
     ...existingProfile,
     store: {
-      ...existingProfile.store,
+      ...(existingProfile.store ?? {}),
       [options.nightscoutProfileName]: {
         ...previousProfileConfig,
         basal: options.importBasalRate
