@@ -265,7 +265,8 @@ export async function getDiasendPatientData({
 
 export function startSynchronization({
   pollingIntervalMs = interval,
-  dateFrom = dayjs().subtract(interval, "milliseconds").toDate(),
+  dateTo = new Date(),
+  dateFrom = dayjs(dateTo).subtract(pollingIntervalMs, "milliseconds").toDate(),
   treatmentsLoopDelayMs = 0,
   ...syncArgs
 }: {
@@ -281,19 +282,12 @@ export function startSynchronization({
         dateTo,
         ...args,
       });
-      // remove the dateTo option
+      // remove the dateTo option (to make it default to current date)
       return {
         ...args,
         dateFrom: latestRecordDate
           ? dayjs(latestRecordDate).add(1, "second").toDate()
           : args.dateFrom,
-        dateTo: dayjs()
-          // add the time it takes for the next iteration of the loop to run
-          .add(pollingIntervalMs, "ms")
-          // subtract any configured delay (to catch any late-added events from diasend api
-          // see https://github.com/burnedikt/diasend-nightscout-bridge/issues/18)
-          .subtract(treatmentsLoopDelayMs, "ms")
-          .toDate(),
       };
     },
     "Entries"
@@ -314,14 +308,26 @@ export function startSynchronization({
       // remove the dateTo option
       return {
         ...args,
+        previousRecords: unprocessedRecords,
         dateFrom: latestRecordDate
           ? dayjs(latestRecordDate).add(1, "second").toDate()
           : args.dateFrom,
-        previousRecords: unprocessedRecords,
+        dateTo: dayjs(dateTo)
+          // add the time it takes for the next iteration of the loop to run
+          .add(pollingIntervalMs, "milliseconds")
+          .toDate(),
       };
     },
     "Treatments"
-  ).loop({ dateFrom, ...syncArgs });
+  ).loop({
+    dateFrom: dayjs(dateFrom)
+      .subtract(treatmentsLoopDelayMs, "milliseconds")
+      .toDate(),
+    dateTo: dayjs(dateTo)
+      .subtract(treatmentsLoopDelayMs, "milliseconds")
+      .toDate(),
+    ...syncArgs,
+  });
 
   // return a function that can be used to end the loop
   return () => {
