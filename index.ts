@@ -368,19 +368,15 @@ export function startPumpSettingsSynchronization({
 
   const looper = new Looper(
     pollingIntervalMs,
-    async () => {
-      const { client, userId } = await getAuthenticatedScrapingClient({
-        username: diasendUsername,
-        password: diasendPassword,
-      });
-      const pumpSettings = await getPumpSettings(client, userId);
-      const updatedNightscoutProfile = updateNightScoutProfileWithPumpSettings(
-        await nightscoutProfileLoader(),
-        pumpSettings,
-        { importBasalRate, nightscoutProfileName }
-      );
-      await nightscoutProfileHandler(updatedNightscoutProfile);
-    },
+    async () =>
+      await synchronizePumpSettings({
+        diasendUsername,
+        diasendPassword,
+        nightscoutProfileLoader,
+        importBasalRate,
+        nightscoutProfileName,
+        nightscoutProfileHandler,
+      }),
     "Pump Settings"
   ).loop();
 
@@ -388,4 +384,30 @@ export function startPumpSettingsSynchronization({
   return () => {
     looper.stop();
   };
+}
+async function synchronizePumpSettings({
+  diasendUsername,
+  diasendPassword,
+  nightscoutProfileName = config.nightscout.profileName,
+  nightscoutProfileLoader = async () => await fetchProfile(),
+  nightscoutProfileHandler = async (profile: Profile) =>
+    await updateProfile(profile),
+  importBasalRate = true,
+}: {
+  diasendUsername: string;
+  diasendPassword: string;
+  pollingIntervalMs?: number;
+  importBasalRate?: boolean;
+} & NightscoutProfileOptions) {
+  const { client, userId } = await getAuthenticatedScrapingClient({
+    username: diasendUsername,
+    password: diasendPassword,
+  });
+  const pumpSettings = await getPumpSettings(client, userId);
+  const updatedNightscoutProfile = updateNightScoutProfileWithPumpSettings(
+    await nightscoutProfileLoader(),
+    pumpSettings,
+    { importBasalRate, nightscoutProfileName: nightscoutProfileName! }
+  );
+  await nightscoutProfileHandler(updatedNightscoutProfile);
 }
