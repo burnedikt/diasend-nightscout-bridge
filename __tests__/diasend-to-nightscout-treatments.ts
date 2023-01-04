@@ -492,4 +492,36 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
       new Date("2022-11-05T13:28:00").toISOString()
     );
   });
+
+  test("uses total value of correction bolus", () => {
+    // Given a correction bolus
+    const correctionBolusRecord: PatientRecordWithDeviceData = {
+      type: "insulin_bolus",
+      created_at: "2023-01-03T22:26:56",
+      unit: "U",
+      total_value: 0.5,
+      spike_value: 0.5,
+      suggested: 0,
+      suggestion_overridden: "yes",
+      suggestion_based_on_bg: "yes",
+      suggestion_based_on_carb: "no",
+      programmed_bg_correction: 0.001,
+      flags: [
+        {
+          flag: 1034,
+          description: "Bolus type ezbg",
+        },
+      ],
+      device: testDevice,
+    };
+
+    // When attempting to convert it to a treatment
+    const treatment = diasendRecordToNightscoutTreatment(
+      correctionBolusRecord,
+      [correctionBolusRecord]
+    );
+
+    // Then expect the insulin to match the record's total value
+    expect((treatment as CorrectionBolusTreatment).insulin).toBe(0.5);
+  });
 });
