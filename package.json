@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "build": "tsc",
     "prepare": "npm run build",
-    "run": "yarn build && node dist/run.js",
+    "start": "npm run run",
+    "run": "npm run build && node dist/run.js",
     "test": "cross-env TZ=Europe/Berlin jest --silent"
   },
   "engines": {
@@ -63,6 +64,7 @@
     "axios-cookiejar-support": "^2",
     "cheerio": "^1.0.0-rc.12",
     "dayjs": "^1.11.4",
+    "dotenv": "^16.0.3",
     "node-cache": "^5.1.2",
     "rand-user-agent": "^1.0.78",
     "tough-cookie": "^4.1.2"
