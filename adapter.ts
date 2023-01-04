@@ -201,7 +201,7 @@ export function diasendRecordToNightscoutTreatment(
     if (bolusRecord.programmed_bg_correction) {
       return {
         eventType: "Correction Bolus",
-        insulin: bolusRecord.programmed_bg_correction,
+        insulin: bolusRecord.total_value,
         ...baseTreatmentData,
         date: new Date(bolusRecord.created_at).getTime(),
         created_at: new Date(bolusRecord.created_at).toISOString(),
