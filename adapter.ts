@@ -4,7 +4,6 @@ import {
   BasalRecord,
   BolusRecord,
   CarbRecord,
-  DeviceData,
   GlucoseRecord,
   PatientRecord,
   PatientRecordWithDeviceData,
