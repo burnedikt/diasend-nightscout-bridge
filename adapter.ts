@@ -55,8 +55,8 @@ export function diasendGlucoseRecordToNightscoutEntry(
   }
 }
 
-// carbs should have been recorded within the next minute after a meal bolus
-const diasendBolusCarbTimeDifferenceThresholdMilliseconds = 60 * 1000;
+// carbs should have been recorded within two minutes after / before a meal bolus
+const diasendBolusCarbTimeDifferenceThresholdMilliseconds = 2 * 60 * 1000;
 const nightscoutApp = "diasend";
 
 function doCarbsBelongToBolus(carbRecord: CarbRecord, others: PatientRecord[]) {
