@@ -15,7 +15,7 @@ While diasend will eventually be replaced by glooko which will (presumably) prov
 
 ## Configuration
 
-The following environment variables are required, also see [example.env](./.env.example):
+The following environment variables are required, also see [env.example](./.env.example):
 
 - `DIASEND_USERNAME`: the username / email address of your disasend account
 - `DIASEND_PASSWORD`: the password of your disasend account
@@ -33,7 +33,7 @@ Optionally, you can also provide the following values:
 
 There are two different ways to use this project in order to synchronize data from diasend to nightscout. You can either [run this bridge standalone](#standalone) in which case it will pull the data via the diasend API and forward it to nightscout via nightscout's REST API. The downside here is that you need to run it on an additional server or PC which is why the more intuitive way is [running the bridge as a plugin directly as part of nightscout](#nightscout-plugin). This way, the data will still be pulled from diasend via its HTTP API but the data will directly be imported into nightscout without going through its REST API, which should likely be more reliable and remove the need to run the bridge separately.
 
-### Nigthscout Plugin
+### Nightscout Plugin
 
 To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1.
 
@@ -43,7 +43,11 @@ A future goal is to either merge the example implementation above upstream or pu
 
 ### Standalone
 
-To run the bridge, ensure that all required environment variables are set and simply execute `yarn install` to install all dependencies and then the following command to synchronize CGV from diasend to nightscout every 5 minutes:
+To run the bridge, ensure that all required environment variables are set. You can set environment variables manually or create a file called `.env` and fill it with values similar to [env.example](./.env.example). All variables defined within the `.env` file will be loaded automatically thanks to [dotenv].
+
+Next, run `yarn install` to install all dependencies.
+
+Finally run the following command to synchronize CGV from diasend to nightscout every 5 minutes:
 
 ```sh
 yarn start
@@ -125,3 +129,4 @@ This project is intended for educational and informational purposes only. It rel
 [File an issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/new/choose
 [docker-deployment-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/16
 [postponed-carb-events-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/15#issuecomment-1297664209
+[dotenv]: https://www.npmjs.com/package/dotenv
