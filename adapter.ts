@@ -233,21 +233,27 @@ export function diasendPumpSettingsToNightscoutProfile(
     carbratio: pumpSettings.insulinCarbRatioProfile.map(
       convertToTimeBasedValue
     ),
-    target_high: [
-      {
-        time: "00:00",
-        value: pumpSettings.bloodGlucoseTargetHigh,
-        timeAsSeconds: 0,
-      },
-    ],
-    target_low: [
-      {
-        time: "00:00",
-        value: pumpSettings.bloodGlucoseTargetLow,
-        timeAsSeconds: 0,
-      },
-    ],
-    dia: pumpSettings.insulinOnBoardDurationHours,
+    target_high: pumpSettings.bloodGlucoseTargetHigh
+      ? [
+          {
+            time: "00:00",
+            value: pumpSettings.bloodGlucoseTargetHigh,
+            timeAsSeconds: 0,
+          },
+        ]
+      : [],
+    target_low: pumpSettings.bloodGlucoseTargetLow
+      ? [
+          {
+            time: "00:00",
+            value: pumpSettings.bloodGlucoseTargetLow,
+            timeAsSeconds: 0,
+          },
+        ]
+      : [],
+    ...(pumpSettings.insulinOnBoardDurationHours
+      ? { dia: pumpSettings.insulinOnBoardDurationHours }
+      : {}),
     units: pumpSettings.units,
     timezone: process.env.TZ,
   };

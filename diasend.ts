@@ -196,10 +196,10 @@ export interface PumpSettings {
   basalProfile: [string, number][];
   insulinCarbRatioProfile: [string, number][];
   insulinSensitivityProfile: [string, number][];
-  bloodGlucoseTargetLow: number;
-  bloodGlucoseTargetHigh: number;
-  insulinOnBoardDurationHours: number;
-  units: "mg/dl" | "mmol/l";
+  bloodGlucoseTargetLow?: number;
+  bloodGlucoseTargetHigh?: number;
+  insulinOnBoardDurationHours?: number;
+  units?: "mg/dl" | "mmol/l";
 }
 
 export async function getPumpSettings(
@@ -276,32 +276,34 @@ export async function getPumpSettings(
     .filter((_, ele) => $(ele).text() === "BG goal low")
     .next()
     .text();
-  const bloodGlucoseTargetLow = parseInt(
-    bloodGlucoseTargetLowElement.split(" ")[0]
-  );
 
-  const units =
-    bloodGlucoseTargetLowElement.split(" ")[1].toLowerCase() === "mg/dl"
+  const bloodGlucoseTargetLow = bloodGlucoseTargetLowElement.length
+    ? parseInt(bloodGlucoseTargetLowElement.split(" ")[0])
+    : undefined;
+
+  const units = bloodGlucoseTargetLowElement
+    ? bloodGlucoseTargetLowElement.split(" ")[1].toLowerCase() === "mg/dl"
       ? "mg/dl"
-      : "mmol/l";
+      : "mmol/l"
+    : undefined;
 
   // high goal of blood glucose
-  const bloodGlucoseTargetHigh = parseInt(
-    $("td")
-      .filter((_, ele) => $(ele).text() === "BG goal high")
-      .next()
-      .text()
-      .split(" ")[0]
-  );
+  const bloodGlucoseTargetHighElement = $("td")
+    .filter((_, ele) => $(ele).text() === "BG goal high")
+    .next()
+    .text();
+  const bloodGlucoseTargetHigh = bloodGlucoseTargetHighElement
+    ? parseInt(bloodGlucoseTargetHighElement.split(" ")[0])
+    : undefined;
 
+  const iobDurationHoursElement = $("td")
+    .filter((_, ele) => $(ele).text() === "Insulin-On-Board Duration")
+    .next()
+    .text();
   // insulin on board duration
-  const iobDurationHours = parseInt(
-    $("td")
-      .filter((_, ele) => $(ele).text() === "Insulin-On-Board Duration")
-      .next()
-      .text()
-      .split(" ")[0]
-  );
+  const iobDurationHours = iobDurationHoursElement
+    ? parseInt(iobDurationHoursElement.split(" ")[0])
+    : undefined;
 
   return {
     basalProfile,
