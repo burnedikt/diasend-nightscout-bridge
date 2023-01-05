@@ -163,7 +163,7 @@ export interface TimeBasedValue {
 }
 
 export interface ProfileConfig {
-  dia: number;
+  dia?: number;
   carbratio: TimeBasedValue[];
   sens: TimeBasedValue[];
   basal: TimeBasedValue[];
