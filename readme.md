@@ -1,6 +1,6 @@
 # Diasend -> Nightscout Bridge #WeAreNotWaiting
 
-Synchronizes continuuous glucose values (CGV) from [diasend] to [nightscout]. This can e.g. help CamAPS | Fx users to view their treatments and glucose values via nightscout.
+Synchronizes treatments (insulin boli, temp basal changes) as well as continuous glucose values (CGV) from [diasend] to [nightscout]. This can e.g. help [CamAPS FX] users to view their treatments and glucose values via nightscout.
 
 While diasend will eventually be replaced by glooko which will (presumably) provide a more open API to access the data and forward it to nightscout, this project can help in the meantime. #WeAreNotWaiting
 
@@ -9,9 +9,19 @@ While diasend will eventually be replaced by glooko which will (presumably) prov
 ✅ Glucose Values (CGM) <br />
 ✅ Correction and Meal Boli <br />
 ✅ Carb Corrections <br />
-✅ Basal rates <br />
+✅ Basal rates (Pre-programmed) <br />
+✅ Basal rates (temporary, as applied by the CamAPS FX hybrid closed loop) <br />
 ✅ Pump settings (see [issue][pump-settings-issue])
 
+## A word of advice
+
+Depending on your use case and requirements, you may not need a synchronization solution from diasend to nightscout as provided by this project. 
+
+If all you need is to monitor the glucose values remotely via nightscout and don't want to use diasend for it, or the delay of uploading to diasend and synchronizing to nightscout (5+ minutes) is unbearable, I recommend taking a look at running [xDrip in Companion mode][xDrip Companion] which will provide glucose values faster to nightscout than this project can.
+
+However, if you need to see more data than the pure continuous glucose values (CGV) within nightscout, e.g. insulin boli, carb corrections, basal rates or temporary adjustments of basal rates, the diasend-nightscout-bridge has got you covered.
+
+And finally - you don't have to pick: You can run both the xDrip Companion and the diasend-nightscout-bridge to get the best out of both worlds: Near-Realtime blood glucose monitoring and trends as well as proper import of all treatments issued via CamAPS FX / stored on diasend. For more details, see [here][xDrip + bridge]
 
 ## Configuration
 
@@ -41,7 +51,7 @@ Once installed, the plugin needs to be enabled via nightscout's `ENABLE="... dia
 
 A future goal is to either merge the example implementation above upstream or publish the bridge as a nightscout plugin directly to npm so that the integration with nightscout becomes easier.
 
-### Standalone
+### Standalone / Sidecar
 
 To run the bridge, ensure that all required environment variables are set. You can set environment variables manually or create a file called `.env` and fill it with values similar to [env.example](./.env.example). All variables defined within the `.env` file will be loaded automatically thanks to [dotenv].
 
@@ -84,11 +94,11 @@ services:
 
 ## Notes & Known Issues
 
-- Up to 10 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS | Fx only
-exports data to diasend so it can take up to 5 minutes until it will appear in
+- Up to 10 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS FX only
+exports data to diasend every 5 minutes and this project then needs to retrieve the data from diasend so it can take up to 10 minutes until it will appear in
 nightscout. This delay can be partially reduced by altering the polling interval (currently only [controllable via source code][change-polling-interval]).
 - Due to the nature of the data provided by diasend and the polling loop, we need to delay processing of some events into the next loop running x minutes later as e.g. meal boli are split on the diasend side into separate events at different times so sometimes not all events belonging together are in the same batch of events to be processed, thereby forcing us to check them again in the next loop before deciding what type of treatment should be sent to diasend. See [this issue][postponed-carb-events-issue] for more details.
-- Timezone issues: The timezone of the server / computer running this project
+- Timezone issues: Due to diasend not providing any timezone information on dates, the timezone of the machine / server running this project
   needs to match the timezone in which the values were sent to diasend, i.e. the timezone of the device generating the data for diasend, see also the [configuration section above](#configuration)
 
 ## Further information
@@ -130,3 +140,6 @@ This project is intended for educational and informational purposes only. It rel
 [docker-deployment-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/16
 [postponed-carb-events-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/15#issuecomment-1297664209
 [dotenv]: https://www.npmjs.com/package/dotenv
+[CamAPS FX]: https://camdiab.com
+[xDrip Companion]: https://xdrip.readthedocs.io/en/latest/install/companion/
+[xDrip + bridge]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/23#issuecomment-1370283732
