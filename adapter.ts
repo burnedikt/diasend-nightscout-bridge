@@ -109,7 +109,7 @@ type NonGlucoseRecords = BasalRecord | BolusRecord | CarbRecord;
 
 // the default duration for temp basal events
 // diasend doesn't provide any duration but we need it for nightscout
-const defaultTempBasalDurationMinutes = 60;
+const defaultTempBasalDurationMinutes = 6 * 60;
 
 export function diasendRecordToNightscoutTreatment(
   record: PatientRecordWithDeviceData<NonGlucoseRecords>,
