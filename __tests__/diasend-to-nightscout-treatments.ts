@@ -483,8 +483,8 @@ describe("testing conversion of diasend patient data to nightscout treatments", 
     const tempBasalTreatment: TempBasalTreatment =
       treatments[0] as TempBasalTreatment;
     expect(tempBasalTreatment.absolute).toBe(0.5);
-    // default duration should be 60 minutes (as otherwise nightscout will ignore the event)
-    expect(tempBasalTreatment.duration).toBe(60);
+    // default duration should be 360 minutes (as otherwise nightscout will ignore the event)
+    expect(tempBasalTreatment.duration).toBe(360);
     expect(tempBasalTreatment.date).toBe(
       new Date("2022-11-05T13:28:00").getTime()
     );
