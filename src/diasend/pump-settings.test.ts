@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import { getPumpSettings, PumpSettings } from "../diasend";
+import { getPumpSettings, PumpSettings } from ".";
 
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;

@@ -11,7 +11,7 @@ const config: {
   nightscout: {
     url?: string;
     apiSecret?: string;
-    profileName?: string;
+    profileName: string;
   };
 } = {
   diasend: {

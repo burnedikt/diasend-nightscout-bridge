@@ -1,5 +1,5 @@
 import { nextTick } from "process";
-import { Looper } from "../Looper";
+import { Looper } from "./looper";
 
 describe("testing looper class", () => {
   jest.useFakeTimers({ doNotFake: ["nextTick"] });
@@ -34,7 +34,7 @@ describe("testing looper class", () => {
 
     // Given a function to be run in a loop which returns arguments for the next run
     const loopFunction = jest.fn(async (args?: LoopArgs) =>
-      Promise.resolve(args! + " updated")
+      Promise.resolve((args ?? "") + " updated")
     );
 
     // When starting the looper and letting one loop to run through

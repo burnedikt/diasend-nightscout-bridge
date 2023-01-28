@@ -20,6 +20,7 @@ export class Looper<TLoopArgs = void> {
   }
 
   loop(args?: TLoopArgs) {
+    // console.log("running", this.name, args);
     let nextArgs: TLoopArgs | undefined;
     // run the looping function, then schedule the next run (unless it should be stopped)
     void this.loopingFun(args)

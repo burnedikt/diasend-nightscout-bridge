@@ -12,7 +12,6 @@ While diasend will eventually be replaced by glooko which will (presumably) prov
 ✅ Basal rates <br />
 ✅ Pump settings (see [issue][pump-settings-issue])
 
-
 ## Configuration
 
 The following environment variables are required, also see [env.example](./.env.example):
@@ -35,7 +34,7 @@ There are two different ways to use this project in order to synchronize data fr
 
 ### Nightscout Plugin
 
-To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1.
+To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: <https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1>.
 
 Once installed, the plugin needs to be enabled via nightscout's `ENABLE="... diasend ..."` environment variable and the following two environment variables need to be defined: `DIASEND_USERNAME` and `DIASEND_PASSWORD` so that nightscout will automatically pull data in from diasend.
 

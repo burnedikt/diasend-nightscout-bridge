@@ -18,9 +18,9 @@ grant_type=password&password={{diasendPassword}}&scope=PATIENT%20DIASEND_MOBILE_
 # @name GetPatientData
 
 GET https://{{diasendHostname}}/1/patient/data
-?type=combined
-&date_from=2022-07-27T10:42:50
-&date_to=2022-08-01T10:42:50
+?type=cgm
+&date_from=2022-12-08T08:00:00
+&date_to=2022-12-08T23:00:00
 &unit=mg_dl
 Authorization: Bearer {{GetAccessToken.response.body.access_token}}
 
