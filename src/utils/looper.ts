@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import * as logger from "loglevel";
 
 dayjs.extend(relativeTime);
 
@@ -20,7 +21,6 @@ export class Looper<TLoopArgs = void> {
   }
 
   loop(args?: TLoopArgs) {
-    // console.log("running", this.name, args);
     let nextArgs: TLoopArgs | undefined;
     // run the looping function, then schedule the next run (unless it should be stopped)
     void this.loopingFun(args)
@@ -29,7 +29,7 @@ export class Looper<TLoopArgs = void> {
         nextArgs = argsCalculatedByLoop;
       })
       .catch((error) => {
-        console.error(error);
+        logger.error(error);
         // retry with the current set of args
         nextArgs = args;
       })
@@ -39,7 +39,7 @@ export class Looper<TLoopArgs = void> {
         if (this.timeoutHandle == 0) return;
 
         // schedule the next run
-        console.log(
+        logger.trace(
           `Next run (${this.name}) will be in ${dayjs()
             .add(this.intervalMs, "milliseconds")
             .fromNow()}...`

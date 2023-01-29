@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import * as logger from "loglevel";
 import { diasendImportnightscoutApp } from "./adapter/const";
 import { synchronizeGlucoseRecords } from "./adapter/glucose";
 import { updateNightScoutProfileWithPumpSettings } from "./adapter/pump-settings";
@@ -26,6 +27,9 @@ import { Looper } from "./utils/looper";
 import { sortDatesAscending } from "./utils/time";
 
 dayjs.extend(relativeTime);
+
+// setup logging
+logger.setDefaultLevel(config.loglevel);
 
 interface BaseSyncDiasendArgs {
   diasendUsername?: string;
@@ -101,13 +105,13 @@ export function startSynchronization({
       const yesterday = dayjs().subtract(24, "hour").toDate();
       if (dateFrom && dateFrom < yesterday) {
         dateFrom = yesterday;
-        console.log(
+        logger.log(
           `Limiting import to start from ${dayjs(dateFrom).fromNow()}`
         );
       }
       if (!dateFrom) {
         dateFrom = yesterday;
-        console.log(
+        logger.log(
           `No previous import found on nightscout, starting to import data from ${dayjs(
             dateFrom
           ).fromNow()}`
@@ -123,17 +127,21 @@ export function startSynchronization({
       });
 
       // Filter out any events that have already been processed in the past (based on the known latest import timestamps per category)
-      console.log(
+      logger.trace(
         "Filter diasend records based on latest known record according to type:"
       );
       Object.entries(latestImportDates).forEach(([key, value]) => {
-        console.log(`   ${key}: ${value?.toISOString() ?? "n/a"}`);
+        logger.trace(`   ${key}: ${value?.toISOString() ?? "n/a"}`);
       });
       const filteredRecords = records.filter(
         (record) =>
           new Date(record.created_at) >
           (getLatestImportDateForRecordType(record.type, latestImportDates) ??
             new Date(0))
+      );
+      logger.trace(
+        `Number of unprocessed records fetched from diasend: ${filteredRecords.length}`,
+        filteredRecords
       );
 
       // process records depending on type and synchronize them to nightscout
@@ -174,7 +182,7 @@ export function startPumpSettingsSynchronization({
 } & NightscoutProfileOptions &
   Partial<SynchronizeOptions> = {}) {
   if (!nightscoutProfileName) {
-    console.info(
+    logger.info(
       "Not synchronizing pump settings to nightscout profile since profile name is not defined"
     );
     return;

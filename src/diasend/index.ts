@@ -3,6 +3,7 @@ import { wrapper } from "axios-cookiejar-support";
 import { load } from "cheerio";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import * as logger from "loglevel";
 import NodeCache from "node-cache";
 import { stringify } from "querystring";
 import randUserAgent from "rand-user-agent";
@@ -65,7 +66,7 @@ export async function getPatientData(
   date_from: Date,
   date_to: Date
 ): Promise<DiasendCGMResponse> {
-  console.log(
+  logger.trace(
     `Fetching diasend patient records between ${date_from.toISOString()} and ${date_to.toISOString()}`
   );
   const response = await diasendClient.get<DiasendCGMResponse>(

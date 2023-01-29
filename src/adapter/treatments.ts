@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import partition from "lodash.partition";
+import * as logger from "loglevel";
 import {
   BasalRecord,
   BolusRecord,
@@ -111,7 +112,7 @@ export async function synchronizeTreatmentRecords(
 
   // nothing to do if no treatments found
   if (!treatments.length) {
-    console.log("No new treatments found");
+    logger.info("No new treatments found");
     return treatments;
   }
 
@@ -131,19 +132,19 @@ export async function synchronizeTreatmentRecords(
     new Date(earliestIdentifiedTreatment.created_at).getTime() -
       diasendBolusCarbTimeDifferenceThresholdMilliseconds
   );
-  console.debug(
+  logger.trace(
     `Fetching existing treatments from nightscout, starting at ${dateFrom.toISOString()}...`
   );
   const existingTreatments = await nightscoutClient.fetchTreatments({
     dateFrom,
   });
 
-  console.debug("new treatments: ", treatments);
-  console.debug("existing treatments: ", existingTreatments);
+  logger.trace("new treatments: ", treatments);
+  logger.trace("existing treatments: ", existingTreatments);
 
   // step 3: go over all treatments and discard the ones that already exist
   const newTreatments = deduplicateTreatments(treatments, existingTreatments);
-  console.debug("deduplicated treatments: ", newTreatments);
+  logger.trace("deduplicated treatments: ", newTreatments);
 
   // step 4: meal bolus are special in a way that their corresponding carbs are reported earlier by diasend than the bolus
   //         which means the carbs might already be on nightscout. Let's try to find all meal boli that don't have matching carbs yet!
@@ -177,8 +178,8 @@ export async function synchronizeTreatmentRecords(
     carbCorrections
   );
 
-  console.debug("merged meal boli: ", mealBoli);
-  console.debug("merged carb corrections: ", mergedCarbCorrections);
+  logger.trace("merged meal boli: ", mealBoli);
+  logger.trace("merged carb corrections: ", mergedCarbCorrections);
 
   // now reassemble the list of treatments to be sent to nightscout
   const treatmentsToBeCreated: Treatment[] = otherNewTreatmens
@@ -197,17 +198,17 @@ export async function synchronizeTreatmentRecords(
     (carbCorrection) => !!carbCorrection._id
   );
 
-  console.log(
+  logger.debug(
     `Sending ${treatmentsToBeCreated.length} new treatments to nightscout`
   );
-  console.log(
+  logger.debug(
     `Removing ${treatmentsToBeDeleted.length} treatments from nightscout`
   );
 
   treatmentsToBeCreated.forEach((treatment) => {
-    console.debug(
+    logger.debug(
       "Treatment delay (seconds) for",
-      dayjs(treatment.created_at).diff(new Date(), "seconds"),
+      Math.abs(dayjs(treatment.created_at).diff(new Date(), "seconds")),
       treatment
     );
   });
@@ -259,7 +260,7 @@ export function mergeBolusAndCarbTreatments(
       .at(0);
 
     if (!carbCorrection) {
-      console.warn("Could not find carb correction matchin bolus", mealBolus);
+      logger.warn("Could not find carb correction matchin bolus", mealBolus);
       return mealBolus;
     }
 

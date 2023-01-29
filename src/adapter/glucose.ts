@@ -1,12 +1,12 @@
+import * as logger from "loglevel";
 import {
   GlucoseRecord,
   PatientRecord,
   PatientRecordWithDeviceData,
 } from "../diasend/types";
 import { SynchronizeOptions } from "../index";
-import { Entry } from "../nightscout/types";
-
 import {
+  Entry,
   ManualGlucoseValueEntry,
   SensorGlucoseValueEntry,
 } from "../nightscout/types";
@@ -55,7 +55,7 @@ export async function synchronizeGlucoseRecords(
         record.type === "glucose"
     )
     .map<Entry>((record) => diasendGlucoseRecordToNightscoutEntry(record));
-  console.log(
+  logger.info(
     `Sending ${nightscoutEntries.length} (glucose) entries to nightscout`
   );
   return await nightscoutClient.createEntries(nightscoutEntries);
