@@ -1,4 +1,5 @@
-import { NightscoutClient, NightscoutHttpClient } from "./client";
+import { NightscoutClient } from "./client";
+import { NightscoutHttpClient } from "./http-api";
 import { Entry, Profile, Treatment, TreatmentType } from "./types";
 
 export {
