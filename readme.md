@@ -90,6 +90,10 @@ nightscout. This delay can be partially reduced by altering the polling interval
 - Timezone issues: The timezone of the server / computer running this project
   needs to match the timezone in which the values were sent to diasend, i.e. the timezone of the device generating the data for diasend, see also the [configuration section above](#configuration)
 
+## Debugging / Logging
+
+This project uses the [loglevel] library to control the verbosity / level of logging. You can turn on more verbose and detailed logging by setting the environment variable `NODE_ENV` to `development`. This will output detailed information about what kind of data has been fetched from diasend and how it will be sent to nightscout.
+
 ## Further information
 
 This project works by connecting to **diasend's internal (!) API, which may change at any time without warning, so use with caution**, and pulling the latest number of
@@ -129,3 +133,4 @@ This project is intended for educational and informational purposes only. It rel
 [docker-deployment-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/16
 [postponed-carb-events-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/15#issuecomment-1297664209
 [dotenv]: https://www.npmjs.com/package/dotenv
+[loglevel]: https://www.npmjs.com/package/loglevel
