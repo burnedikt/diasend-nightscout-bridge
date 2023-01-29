@@ -127,11 +127,11 @@ export function startSynchronization({
       });
 
       // Filter out any events that have already been processed in the past (based on the known latest import timestamps per category)
-      logger.trace(
+      logger.debug(
         "Filter diasend records based on latest known record according to type:"
       );
       Object.entries(latestImportDates).forEach(([key, value]) => {
-        logger.trace(`   ${key}: ${value?.toISOString() ?? "n/a"}`);
+        logger.debug(`   ${key}: ${value?.toISOString() ?? "n/a"}`);
       });
       const filteredRecords = records.filter(
         (record) =>
@@ -139,7 +139,7 @@ export function startSynchronization({
           (getLatestImportDateForRecordType(record.type, latestImportDates) ??
             new Date(0))
       );
-      logger.trace(
+      logger.debug(
         `Number of unprocessed records fetched from diasend: ${filteredRecords.length}`,
         filteredRecords
       );

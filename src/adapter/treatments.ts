@@ -132,19 +132,19 @@ export async function synchronizeTreatmentRecords(
     new Date(earliestIdentifiedTreatment.created_at).getTime() -
       diasendBolusCarbTimeDifferenceThresholdMilliseconds
   );
-  logger.trace(
+  logger.debug(
     `Fetching existing treatments from nightscout, starting at ${dateFrom.toISOString()}...`
   );
   const existingTreatments = await nightscoutClient.fetchTreatments({
     dateFrom,
   });
 
-  logger.trace("new treatments: ", treatments);
-  logger.trace("existing treatments: ", existingTreatments);
+  logger.debug("new treatments: ", treatments);
+  logger.debug("existing treatments: ", existingTreatments);
 
   // step 3: go over all treatments and discard the ones that already exist
   const newTreatments = deduplicateTreatments(treatments, existingTreatments);
-  logger.trace("deduplicated treatments: ", newTreatments);
+  logger.debug("deduplicated treatments: ", newTreatments);
 
   // step 4: meal bolus are special in a way that their corresponding carbs are reported earlier by diasend than the bolus
   //         which means the carbs might already be on nightscout. Let's try to find all meal boli that don't have matching carbs yet!
@@ -178,8 +178,8 @@ export async function synchronizeTreatmentRecords(
     carbCorrections
   );
 
-  logger.trace("merged meal boli: ", mealBoli);
-  logger.trace("merged carb corrections: ", mergedCarbCorrections);
+  logger.debug("merged meal boli: ", mealBoli);
+  logger.debug("merged carb corrections: ", mergedCarbCorrections);
 
   // now reassemble the list of treatments to be sent to nightscout
   const treatmentsToBeCreated: Treatment[] = otherNewTreatmens
