@@ -173,12 +173,10 @@ export function startPumpSettingsSynchronization({
   pollingIntervalMs = defaultPollingIntervalPumpSettings,
   nightscoutProfileName = config.nightscout.profileName,
   nightscoutClient = getNightscoutHttpClient(),
-  importBasalRate = true,
 }: {
   diasendUsername?: string;
   diasendPassword?: string;
   pollingIntervalMs?: number;
-  importBasalRate?: boolean;
 } & NightscoutProfileOptions &
   Partial<SynchronizeOptions> = {}) {
   if (!nightscoutProfileName) {
@@ -196,7 +194,6 @@ export function startPumpSettingsSynchronization({
         diasendPassword,
         nightscoutProfileName,
         nightscoutClient,
-        importBasalRate,
       }),
     "Pump Settings"
   ).loop();
@@ -211,13 +208,11 @@ async function synchronizePumpSettings({
   diasendUsername = config.diasend.username,
   diasendPassword = config.diasend.password,
   nightscoutProfileName = config.nightscout.profileName,
-  importBasalRate = true,
   nightscoutClient,
 }: {
   diasendUsername?: string;
   diasendPassword?: string;
   pollingIntervalMs?: number;
-  importBasalRate?: boolean;
 } & NightscoutProfileOptions &
   SynchronizeOptions) {
   if (!diasendUsername) {
@@ -234,7 +229,7 @@ async function synchronizePumpSettings({
   const updatedNightscoutProfile = updateNightScoutProfileWithPumpSettings(
     await nightscoutClient.fetchProfile(),
     pumpSettings,
-    { importBasalRate, nightscoutProfileName }
+    { nightscoutProfileName }
   );
   await nightscoutClient.updateProfile(updatedNightscoutProfile);
 }

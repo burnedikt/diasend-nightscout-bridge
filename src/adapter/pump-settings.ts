@@ -69,10 +69,8 @@ export function updateNightScoutProfileWithPumpSettings(
   existingProfile: Profile,
   pumpSettings: PumpSettings,
   options: {
-    importBasalRate: boolean;
     nightscoutProfileName: string;
   } = {
-    importBasalRate: true,
     nightscoutProfileName: config.nightscout.profileName,
   }
 ): Profile {
@@ -88,9 +86,7 @@ export function updateNightScoutProfileWithPumpSettings(
       ...(existingProfile.store ?? {}),
       [options.nightscoutProfileName]: {
         ...previousProfileConfig,
-        basal: options.importBasalRate
-          ? pumpSettingsAsProfileConfig.basal
-          : previousProfileConfig.basal,
+        basal: pumpSettingsAsProfileConfig.basal,
       },
     },
   };
