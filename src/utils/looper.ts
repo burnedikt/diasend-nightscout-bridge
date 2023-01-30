@@ -39,7 +39,7 @@ export class Looper<TLoopArgs = void> {
         if (this.timeoutHandle == 0) return;
 
         // schedule the next run
-        logger.trace(
+        logger.debug(
           `Next run (${this.name}) will be in ${dayjs()
             .add(this.intervalMs, "milliseconds")
             .fromNow()}...`
