@@ -117,11 +117,9 @@ export async function synchronizeTreatmentRecords(
   }
 
   // step 2: load all existing treatments from nightscout for the same timespan
-  const earliestIdentifiedTreatment = treatments
-    .sort((t1, t2) =>
-      sortDatesAscending(new Date(t1.created_at), new Date(t2.created_at))
-    )
-    .at(0);
+  const earliestIdentifiedTreatment = treatments.sort((t1, t2) =>
+    sortDatesAscending(new Date(t1.created_at), new Date(t2.created_at))
+  )[0];
 
   if (!earliestIdentifiedTreatment) {
     throw new Error("No earliest treatment found");
@@ -256,8 +254,7 @@ export function mergeBolusAndCarbTreatments(
       )
       .sort((c1, c2) =>
         sortByTimeDiff(c1.created_at, c2.created_at, mealBolus.created_at)
-      )
-      .at(0);
+      )[0];
 
     if (!carbCorrection) {
       logger.warn("Could not find carb correction matchin bolus", mealBolus);

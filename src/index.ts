@@ -77,9 +77,7 @@ function getLatestImportDateForRecordType(
       return [
         latestImportDates["Meal Bolus"],
         latestImportDates["Correction Bolus"],
-      ]
-        .sort(sortDatesAscending)
-        .at(0);
+      ].sort(sortDatesAscending)[0];
   }
 }
 

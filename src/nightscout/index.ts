@@ -26,11 +26,11 @@ export async function fetchLatestTreatment(
     ...filters,
   });
 
-  return treatments.at(0);
+  return treatments[0];
 }
 
 export async function fetchLatestSGV(nightscoutClient: NightscoutClient) {
   // get only one entry --> the newest one
   const treatments = await nightscoutClient.fetchEntries({ count: 1 });
-  return treatments.at(0);
+  return treatments[0];
 }
