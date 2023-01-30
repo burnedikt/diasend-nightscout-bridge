@@ -95,7 +95,9 @@ export function startSynchronization({
     pollingIntervalMs,
     async () => {
       // identify lower time limit (= last known earliest record imported from diasend to nightscout)
-      const latestImportDates = await fetchLatestImportDatesByTreatmentType();
+      const latestImportDates = await fetchLatestImportDatesByTreatmentType(
+        nightscoutClient
+      );
 
       // to determine date from fetching, ignore the SGV values
       let dateFrom =
@@ -239,7 +241,7 @@ type LatestImportDatesByTreatmentType = {
 };
 
 async function fetchLatestImportDatesByTreatmentType(
-  nightscoutClient = getNightscoutHttpClient()
+  nightscoutClient: NightscoutClient
 ): Promise<LatestImportDatesByTreatmentType> {
   // check for latest import dates of all treatment types ...
   const treatmentTypesLatestImportDates = treatmentTypes
