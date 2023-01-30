@@ -1,7 +1,9 @@
 import * as dotenv from "dotenv"; // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
+import { LogLevelDesc } from "loglevel";
 dotenv.config();
 
 const config: {
+  loglevel: LogLevelDesc;
   diasend: {
     clientId: string;
     clientSecret: string;
@@ -11,9 +13,10 @@ const config: {
   nightscout: {
     url?: string;
     apiSecret?: string;
-    profileName?: string;
+    profileName: string;
   };
 } = {
+  loglevel: process.env.NODE_ENV === "production" ? "info" : "trace",
   diasend: {
     clientId:
       process.env.DIASEND_CLIENT_ID ||
@@ -26,7 +29,7 @@ const config: {
   nightscout: {
     url: process.env.NIGHTSCOUT_URL,
     apiSecret: process.env.NIGHTSCOUT_API_SECRET,
-    profileName: process.env.NIGHTSCOUT_PROFILE_NAME,
+    profileName: process.env.NIGHTSCOUT_PROFILE_NAME ?? "Diasend",
   },
 };
 

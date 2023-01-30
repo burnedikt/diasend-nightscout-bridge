@@ -15,7 +15,7 @@ While diasend will eventually be replaced by glooko which will (presumably) prov
 
 ## A word of advice
 
-Depending on your use case and requirements, you may not need a synchronization solution from diasend to nightscout as provided by this project. 
+Depending on your use case and requirements, you may not need a synchronization solution from diasend to nightscout as provided by this project.
 
 If all you need is to monitor the glucose values remotely via nightscout and don't want to use diasend for it, or the delay of uploading to diasend and synchronizing to nightscout (5+ minutes) is unbearable, I recommend taking a look at running [xDrip in Companion mode][xDrip Companion] which will provide glucose values faster to nightscout than this project can.
 
@@ -45,7 +45,7 @@ There are two different ways to use this project in order to synchronize data fr
 
 ### Nightscout Plugin
 
-To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1.
+To run this bridge as a plugin directly in nightscout, you can simply install the bridge as an npm package within your nightscout installation and implement a handler to import the data directly into nightscout. A sample implementation can be found here: <https://github.com/nightscout/cgm-remote-monitor/compare/master...burnedikt:cgm-remote-monitor:master?expand=1>.
 
 Once installed, the plugin needs to be enabled via nightscout's `ENABLE="... diasend ..."` environment variable and the following two environment variables need to be defined: `DIASEND_USERNAME` and `DIASEND_PASSWORD` so that nightscout will automatically pull data in from diasend.
 
@@ -101,6 +101,10 @@ nightscout. This delay can be partially reduced by altering the polling interval
 - Timezone issues: Due to diasend not providing any timezone information on dates, the timezone of the machine / server running this project
   needs to match the timezone in which the values were sent to diasend, i.e. the timezone of the device generating the data for diasend, see also the [configuration section above](#configuration)
 
+## Debugging / Logging
+
+This project uses the [loglevel] library to control the verbosity / level of logging. You can turn on more verbose and detailed logging by setting the environment variable `NODE_ENV` to `development`. This will output detailed information about what kind of data has been fetched from diasend and how it will be sent to nightscout.
+
 ## Further information
 
 This project works by connecting to **diasend's internal (!) API, which may change at any time without warning, so use with caution**, and pulling the latest number of
@@ -140,6 +144,7 @@ This project is intended for educational and informational purposes only. It rel
 [docker-deployment-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/16
 [postponed-carb-events-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/15#issuecomment-1297664209
 [dotenv]: https://www.npmjs.com/package/dotenv
+[loglevel]: https://www.npmjs.com/package/loglevel
 [CamAPS FX]: https://camdiab.com
 [xDrip Companion]: https://xdrip.readthedocs.io/en/latest/install/companion/
 [xDrip + bridge]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/23#issuecomment-1370283732

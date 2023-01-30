@@ -1,19 +1,12 @@
-import { diasendGlucoseRecordToNightscoutEntry } from "../adapter";
-import {
-  DeviceData,
-  GlucoseRecord,
-  PatientRecordWithDeviceData,
-} from "../diasend";
+import { GlucoseRecord, PatientRecordWithDeviceData } from "../diasend/types";
 import {
   ManualGlucoseValueEntry,
   SensorGlucoseValueEntry,
-} from "../nightscout";
+} from "../nightscout/types";
+import { testDeviceData } from "../__mocks__/shared";
+import { diasendGlucoseRecordToNightscoutEntry } from "./glucose";
 
-const testDevice: DeviceData = {
-  manufacturer: "ACME",
-  serial: "1111-22123",
-  model: "Test Pump",
-};
+const testDevice = testDeviceData;
 
 describe("testing conversion of diasend patient data to nightscout entries", () => {
   test("continuous reading", () => {
@@ -38,13 +31,13 @@ describe("testing conversion of diasend patient data to nightscout entries", () 
       diasendGlucoseRecordToNightscoutEntry(glucoseReading);
 
     // then expect it to look like this
-    expect(nightscoutEntry).toStrictEqual<SensorGlucoseValueEntry>({
+    expect(nightscoutEntry).toEqual<SensorGlucoseValueEntry>({
       date: 1661524424000,
       dateString: "2022-08-26T14:33:44.000Z",
       type: "sgv",
       app: "diasend",
       sgv: 232,
-      device: "Test Pump (1111-22123)",
+      device: "Test Pump (1234567890)",
       direction: undefined,
     });
   });
@@ -71,13 +64,13 @@ describe("testing conversion of diasend patient data to nightscout entries", () 
       diasendGlucoseRecordToNightscoutEntry(glucoseReading);
 
     // then expect it to look like this
-    expect(nightscoutEntry).toStrictEqual<ManualGlucoseValueEntry>({
+    expect(nightscoutEntry).toEqual<ManualGlucoseValueEntry>({
       date: 1661522677000,
       dateString: "2022-08-26T14:04:37.000Z",
       type: "mbg",
       app: "diasend",
       mbg: 178,
-      device: "Test Pump (1111-22123)",
+      device: "Test Pump (1234567890)",
     });
   });
 });

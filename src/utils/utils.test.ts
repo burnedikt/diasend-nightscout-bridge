@@ -9,7 +9,7 @@ const dependentFunctionParameters = ({
 } = {}) => dateFrom;
 
 describe("testing diasend-to-nightscout conversion loop", () => {
-  test("default start of sync period depends on end of sync period", async () => {
+  test("default start of sync period depends on end of sync period", () => {
     // Given a specified end date for the synchronization period
     const endDate = new Date("2022-01-01T12:00:12.000Z");
 

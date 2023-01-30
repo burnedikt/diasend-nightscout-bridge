@@ -1,86 +1,29 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
-import config from "./config";
-import { stringify } from "querystring";
+import { wrapper } from "axios-cookiejar-support";
+import { load } from "cheerio";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import * as logger from "loglevel";
 import NodeCache from "node-cache";
-import { wrapper } from "axios-cookiejar-support";
-import { CookieJar } from "tough-cookie";
+import { stringify } from "querystring";
 import randUserAgent from "rand-user-agent";
-import { load } from "cheerio";
+import { CookieJar } from "tough-cookie";
+import config from "../utils/config";
+import {
+  DeviceData,
+  PatientRecord,
+  PatientRecordWithDeviceData,
+  TokenResponse,
+} from "./types";
 
-type GlucoseUnit = "mg/dl" | "mmol/l";
+dayjs.extend(relativeTime);
 
 const tokenCache = new NodeCache({
   checkperiod: 60, // check every 60 seconds for expired items / tokens
 });
 
-dayjs.extend(relativeTime);
-
 // for some obscure reason, diasend deviates from the normal ISO date format by removing the timezone information
-const diasendIsoFormatWithoutTZ = "YYYY-MM-DDTHH:mm:ss";
-
-interface TokenResponse {
-  access_token: string;
-  expires_in: string;
-  token_type: string;
-}
-
-export interface BaseRecord {
-  type: "insulin_bolus" | "insulin_basal" | "glucose" | "carb";
-  created_at: string;
-  flags: { flag: number; description: string }[];
-}
-
-export interface GlucoseRecord extends BaseRecord {
-  type: "glucose";
-  value: number;
-  unit: GlucoseUnit;
-}
-
-type YesOrNo = "yes" | "no";
-
-export interface BolusRecord extends BaseRecord {
-  type: "insulin_bolus";
-  unit: "U";
-  total_value: number;
-  spike_value: number;
-  suggested: number;
-  suggestion_overridden: YesOrNo;
-  suggestion_based_on_bg: YesOrNo;
-  suggestion_based_on_carb: YesOrNo;
-  programmed_meal?: number;
-  programmed_bg_correction?: number;
-}
-export interface CarbRecord extends BaseRecord {
-  type: "carb";
-  value: string; // for some reason, carbs are not given as numbers but a string 🤷
-  unit: "g";
-}
-
-export interface BasalRecord extends BaseRecord {
-  type: "insulin_basal";
-  unit: "U/h";
-  value: number;
-}
-
-export type PatientRecord =
-  | GlucoseRecord
-  | BolusRecord
-  | BasalRecord
-  | CarbRecord;
-
-export interface DeviceData {
-  serial: string;
-  manufacturer: string;
-  model: string;
-}
-
-export type PatientRecordWithDeviceData<
-  T extends PatientRecord = PatientRecord
-> = T & {
-  device: DeviceData;
-};
+const diasendIsoFormatWithoutTZ = "YYYY-MM-DDTHH:mm:ss" as const;
 
 const diasendClient = axios.create({
   baseURL: "https://api.diasend.com/1",
@@ -89,9 +32,9 @@ const diasendClient = axios.create({
   },
 });
 
-export async function obtainDiasendAccessToken(
-  clientId: string = config.diasend.clientId,
-  clientSecret: string = config.diasend.clientSecret,
+export async function getAccessToken(
+  clientId: string,
+  clientSecret: string,
   username: string,
   password: string,
   allowCache = true
@@ -123,7 +66,7 @@ export async function getPatientData(
   date_from: Date,
   date_to: Date
 ): Promise<DiasendCGMResponse> {
-  console.log(
+  logger.debug(
     `Fetching diasend patient records between ${date_from.toISOString()} and ${date_to.toISOString()}`
   );
   const response = await diasendClient.get<DiasendCGMResponse>(
@@ -314,4 +257,43 @@ export async function getPumpSettings(
     insulinOnBoardDurationHours: iobDurationHours,
     units,
   };
+}
+
+export async function fetchPatientRecords({
+  diasendUsername = config.diasend.username,
+  diasendPassword = config.diasend.password,
+  diasendClientId = config.diasend.clientId,
+  diasendClientSecret = config.diasend.clientSecret,
+  dateFrom,
+  dateTo,
+}: {
+  diasendUsername?: string;
+  diasendPassword?: string;
+  diasendClientId?: string;
+  diasendClientSecret?: string;
+  dateFrom: Date;
+  dateTo: Date;
+}) {
+  if (!diasendUsername) {
+    throw Error("Diasend Username not configured");
+  }
+  if (!diasendPassword) {
+    throw Error("Diasend Password not configured");
+  }
+
+  const { access_token: diasendAccessToken } = await getAccessToken(
+    diasendClientId,
+    diasendClientSecret,
+    diasendUsername,
+    diasendPassword
+  );
+
+  // using the diasend token, now fetch the patient records per device
+  const records = await getPatientData(diasendAccessToken, dateFrom, dateTo);
+  return records.flatMap((record) =>
+    record.data.map<PatientRecordWithDeviceData<PatientRecord>>((r) => ({
+      ...r,
+      device: record.device,
+    }))
+  );
 }
