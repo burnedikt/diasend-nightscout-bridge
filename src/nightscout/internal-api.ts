@@ -7,11 +7,14 @@ interface BaseNightscoutCollection<T> {
     callback: (err: unknown, entries: T[]) => void
   ) => void;
   remove: (
-    filters: Partial<T>,
+    filters: { find: Partial<T> },
     callback: (err: unknown, result: unknown) => void
   ) => void;
   list: (
-    filters: Omit<FilterArgs<T>, "dateFrom" | "dateTo">,
+    filters: {
+      count?: number;
+      find: Omit<FilterArgs<T>, "dateFrom" | "dateTo">;
+    },
     callback: (err: unknown, entries: T[]) => void
   ) => void;
 }
@@ -51,14 +54,18 @@ export class InternalApiNightscoutClient implements NightscoutClient {
   async fetchTreatments({
     dateFrom,
     dateTo,
+    count,
     ...filters
   }: FilterArgs<Treatment> = {}) {
     return await new Promise<Treatment[]>((resolve, reject) =>
       this.treatments.list(
         {
-          ...filters,
-          ...this.dateFromToQueryParam(dateFrom, "created_at"),
-          ...this.dateToToQueryParam(dateTo, "created_at"),
+          count,
+          find: {
+            ...filters,
+            ...this.dateFromToQueryParam(dateFrom, "created_at"),
+            ...this.dateToToQueryParam(dateTo, "created_at"),
+          },
         },
         (err, treatments) => (err ? reject(err) : resolve(treatments))
       )
@@ -77,20 +84,26 @@ export class InternalApiNightscoutClient implements NightscoutClient {
   }
   async deleteTreatments(filters: Partial<Treatment>) {
     await new Promise<void>((resolve, reject) =>
-      this.treatments.remove(filters, (err) => (err ? reject(err) : resolve()))
+      this.treatments.remove({ find: filters }, (err) =>
+        err ? reject(err) : resolve()
+      )
     );
   }
   async fetchEntries({
     dateFrom,
     dateTo,
+    count,
     ...filters
   }: FilterArgs<Treatment> = {}) {
     return await new Promise<Entry[]>((resolve, reject) =>
       this.entries.list(
         {
-          ...filters,
-          ...this.dateFromToQueryParam(dateFrom),
-          ...this.dateToToQueryParam(dateTo),
+          count,
+          find: {
+            ...filters,
+            ...this.dateFromToQueryParam(dateFrom),
+            ...this.dateToToQueryParam(dateTo),
+          },
         },
         (err, entries) => (err ? reject(err) : resolve(entries))
       )
@@ -108,7 +121,7 @@ export class InternalApiNightscoutClient implements NightscoutClient {
   }
   async deleteEntries(filters: Partial<Entry>) {
     await new Promise((resolve, reject) => {
-      this.entries.remove(filters, (err, results) =>
+      this.entries.remove({ find: filters }, (err, results) =>
         err ? reject(err) : resolve(results)
       );
     });
