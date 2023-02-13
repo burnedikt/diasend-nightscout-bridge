@@ -31,7 +31,7 @@ The following environment variables are required, also see [env.example](./.env.
 - `DIASEND_PASSWORD`: the password of your disasend account
 - `NIGHTSCOUT_URL`: the url of your nightscout instance
 - `NIGHTSCOUT_API_SECRET`: the api secret to communicate with your nightscout instance
-- `TZ`: the timezone from which the glucose values have been sent to diasend. If you run this project on your local machine, this configuration will likely not be necessary. If your run it on a dedicated server (e.g. as a plugin within nightscout), though it must be configured to avoid an [offset in the data due to timezone issues]. Usually the timezone in which your device exporting data to diasend is.
+- `TZ`: the timezone from which the glucose values have been sent to diasend. If your run the bridge on a machine other than your local pc (e.g. a dedicated server), it must be configured to avoid an [offset in the data due to timezone issues][timezone-offset-issue]. Usually the timezone in which your device exporting data to diasend is. [This little utility][timezone-identifier] can help you find the correct value for the `TZ` variable.
 
 Optionally, you can also provide the following values:
 
@@ -148,3 +148,5 @@ This project is intended for educational and informational purposes only. It rel
 [CamAPS FX]: https://camdiab.com
 [xDrip Companion]: https://xdrip.readthedocs.io/en/latest/install/companion/
 [xDrip + bridge]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/23#issuecomment-1370283732
+[timezone-identifier]: https://js-qxakt9.stackblitz.io
+[timezone-offset-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/43
