@@ -109,7 +109,7 @@ export interface TempBasalTreatment extends Treatment {
   // ISO string timestamp for when the record or event occurred. Hard requirement for some events
   created_at: string;
   // Amount of insulin, if any. Given in Units per hour (U/h)
-  rate: number
+  rate?: number
 }
 
 export interface TimeBasedValue {
