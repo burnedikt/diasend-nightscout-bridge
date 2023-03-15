@@ -47,6 +47,7 @@ export function diasendRecordToNightscoutTreatment(
     return {
       eventType: "Temp Basal",
       absolute: record.value,
+      rate: record.value,
       duration: defaultTempBasalDurationMinutes,
       ...baseTreatmentData,
     };
