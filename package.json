@@ -9,6 +9,10 @@
     "email": "dev@burnedikt.com",
     "url": "https://burnedikt.com/"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/burnedikt/diasend-nightscout-bridge"
+  },
   "scripts": {
     "lint": "eslint .",
     "build": "tsc",
