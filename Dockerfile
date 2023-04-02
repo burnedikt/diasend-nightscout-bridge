@@ -7,4 +7,4 @@ COPY . ./
 RUN yarn install
 RUN yarn build
 
-CMD [ "node", "dist/run.js" ]
+CMD [ "node", "dist/cli/run.js" ]
