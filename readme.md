@@ -17,11 +17,11 @@ While diasend will eventually be replaced by glooko which will (presumably) prov
 
 Depending on your use case and requirements, you may not need a synchronization solution from diasend to nightscout as provided by this project.
 
-If all you need is to monitor the glucose values remotely via nightscout and don't want to use diasend for it, or the delay of uploading to diasend and synchronizing to nightscout (5+ minutes) is unbearable, I recommend taking a look at running [xDrip in Companion mode][xDrip Companion] which will provide glucose values faster to nightscout than this project can.
+If all you need is to monitor the glucose values remotely via nightscout and don't want to use diasend for it, or the delay of uploading to diasend and synchronizing to nightscout (5+ minutes) is unbearable, I recommend taking a look at running [xDrip in Companion mode][xdrip companion] which will provide glucose values faster to nightscout than this project can.
 
 However, if you need to see more data than the pure continuous glucose values (CGV) within nightscout, e.g. insulin boli, carb corrections, basal rates or temporary adjustments of basal rates, the diasend-nightscout-bridge has got you covered.
 
-And finally - you don't have to pick: You can run both the xDrip Companion and the diasend-nightscout-bridge to get the best out of both worlds: Near-Realtime blood glucose monitoring and trends as well as proper import of all treatments issued via CamAPS FX / stored on diasend. For more details, see [here][xDrip + bridge]
+And finally - you don't have to pick: You can run both the xDrip Companion and the diasend-nightscout-bridge to get the best out of both worlds: Near-Realtime blood glucose monitoring and trends as well as proper import of all treatments issued via CamAPS FX / stored on diasend. For more details, see [here][xdrip + bridge]
 
 ## Configuration
 
@@ -78,11 +78,9 @@ You can use the resulting container image (in this case named `diasend2nightscou
 
 services:
   diasend-bridge:
-    image: diasend2nightscout
-    # alternatively, you can also configure a build section here to skip the explicit build step above. uncomment the following lines to do so
-    # build:
-    #   context: .
-    env:
+    build:
+      context: .
+    environment:
       DIASEND_USERNAME: <diasend-username>
       DIASEND_PASSWORD: <diasend-password>
       NIGHTSCOUT_URL: <url-of-nightscout-instance>
@@ -95,8 +93,8 @@ services:
 ## Notes & Known Issues
 
 - Up to 10 minutes delay of data: Depending on how often data is exported to diasend, the data (e.g. glucose values) can arrive with a delay in nightscout. E.g. CamAPS FX only
-exports data to diasend every 5 minutes and this project then needs to retrieve the data from diasend so it can take up to 10 minutes until it will appear in
-nightscout. This delay can be partially reduced by altering the polling interval (currently only [controllable via source code][change-polling-interval]).
+  exports data to diasend every 5 minutes and this project then needs to retrieve the data from diasend so it can take up to 10 minutes until it will appear in
+  nightscout. This delay can be partially reduced by altering the polling interval (currently only [controllable via source code][change-polling-interval]).
 - Due to the nature of the data provided by diasend and the polling loop, we need to delay processing of some events into the next loop running x minutes later as e.g. meal boli are split on the diasend side into separate events at different times so sometimes not all events belonging together are in the same batch of events to be processed, thereby forcing us to check them again in the next loop before deciding what type of treatment should be sent to diasend. See [this issue][postponed-carb-events-issue] for more details.
 - Timezone issues: Due to diasend not providing any timezone information on dates, the timezone of the machine / server running this project
   needs to match the timezone in which the values were sent to diasend, i.e. the timezone of the device generating the data for diasend, see also the [configuration section above](#configuration)
@@ -132,21 +130,21 @@ Pull requests are welcome.
 This project is intended for educational and informational purposes only. It relies on a series of fragile components and assumptions, any of which may break at any time. It is not FDA approved and should not be used to make medical decisions. It is neither affiliated with nor endorsed by diasend / glooko, and may violate their Terms of Service.
 
 [diasend]: https://www.diasend.com/
-[Share2NightScout Bridge]: https://github.com/nightscout/share2nightscout-bridge
+[share2nightscout bridge]: https://github.com/nightscout/share2nightscout-bridge
 [nightscout]: https://github.com/nightscout/cgm-remote-monitor
-[Scott Hanselmann]: https://www.hanselman.com/blog/bridging-dexcom-share-cgm-receivers-and-nightscout
+[scott hanselmann]: https://www.hanselman.com/blog/bridging-dexcom-share-cgm-receivers-and-nightscout
 [minimed-connect-to-nightscout]: https://github.com/nightscout/minimed-connect-to-nightscout
-[REST Client plugin]: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+[rest client plugin]: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
 [diasend2nightscout-bridge]: https://github.com/funkstille/diasend2nightscout-bridge
 [change-polling-interval]: https://github.com/burnedikt/diasend-nightscout-bridge/blob/f29f671dfa74bf9b14ae8610d84c8d58a654c37f/index.ts#L190
 [pump-settings-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/1
-[File an issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/new/choose
+[file an issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/new/choose
 [docker-deployment-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/16
 [postponed-carb-events-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/15#issuecomment-1297664209
 [dotenv]: https://www.npmjs.com/package/dotenv
 [loglevel]: https://www.npmjs.com/package/loglevel
-[CamAPS FX]: https://camdiab.com
-[xDrip Companion]: https://xdrip.readthedocs.io/en/latest/install/companion/
-[xDrip + bridge]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/23#issuecomment-1370283732
+[camaps fx]: https://camdiab.com
+[xdrip companion]: https://xdrip.readthedocs.io/en/latest/install/companion/
+[xdrip + bridge]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/23#issuecomment-1370283732
 [timezone-identifier]: https://js-qxakt9.stackblitz.io
 [timezone-offset-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/43

@@ -1,0 +1,12 @@
+# This is a sample docker-compose file to run the diasend-to-nightscout-bridge as a standalone / sidecar container
+
+services:
+  diasend-bridge:
+    build:
+      context: .
+    environment:
+      DIASEND_USERNAME: <diasend-username>
+      DIASEND_PASSWORD: <diasend-password>
+      NIGHTSCOUT_URL: <url-of-nightscout-instance>
+      NIGHTSCOUT_API_SECRET: <retracted>
+      # ... other environment variables for configuration, see readme
