@@ -1,4 +1,9 @@
-node_modules
-dist
-.vscode
-.github
+# Ignore every file in the entire build context per default
+
+-
+
+# Re-include only rqeuired files / folders
+
+!src
+!package.json
+!yarn.lock
