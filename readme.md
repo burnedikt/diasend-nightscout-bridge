@@ -1,3 +1,15 @@
+# Attention
+
+> ⚠️ **diasend.com has been superseded by glooko.com.** ⚠️ 
+> 
+> This project will no longer work since diasend will be spun down in the future and be completely replaced by glooko. For more information, visit the official resources of [diasend / glooko][diasend-glooko].
+>
+> If you want to import data from e.g. CamAPS into nightscout, [here are some options to look into.][camaps-nightscout-options]
+> 
+> Thank you for everyone who contributed to this project!
+
+---
+
 # Diasend -> Nightscout Bridge #WeAreNotWaiting
 
 Synchronizes treatments (insulin boli, temp basal changes) as well as continuous glucose values (CGV) from [diasend] to [nightscout]. This can e.g. help [CamAPS FX] users to view their treatments and glucose values via nightscout.
@@ -148,3 +160,5 @@ This project is intended for educational and informational purposes only. It rel
 [xdrip + bridge]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/23#issuecomment-1370283732
 [timezone-identifier]: https://js-qxakt9.stackblitz.io
 [timezone-offset-issue]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/43
+[diasend-glooko]: https://support.diasend.com/hc/en-us/categories/1500000765101-Upgrade-to-Glooko-
+[camaps-nightscout-options]: https://github.com/burnedikt/diasend-nightscout-bridge/issues/44
